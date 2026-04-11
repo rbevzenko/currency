@@ -43,6 +43,91 @@ const CURRENCIES = [
 
 const CURRENCY_MAP = Object.fromEntries(CURRENCIES.map(c => [c.code, c]));
 
+// ─── API helpers (Frankfurter → CDN fallback) ────────────────────────────────
+
+const FRANKFURTER_HOSTS = [
+  'https://api.frankfurter.app',
+  'https://api.frankfurter.dev',
+];
+const CDN_BASE = 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api';
+
+async function timedFetch(url, ms = 6000) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    return res;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+/** Returns { rate, date } or throws */
+async function getLatestRate(from, to) {
+  // 1 + 2: try both Frankfurter hosts
+  for (const host of FRANKFURTER_HOSTS) {
+    try {
+      const res = await timedFetch(`${host}/latest?from=${from}&to=${to}`);
+      if (res.ok) {
+        const data = await res.json();
+        return { rate: data.rates[to], date: data.date };
+      }
+    } catch { /* try next */ }
+  }
+  // 3: CDN fallback
+  const res = await timedFetch(
+    `${CDN_BASE}@latest/v1/currencies/${from.toLowerCase()}.min.json`
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  const rate = data[from.toLowerCase()]?.[to.toLowerCase()];
+  if (rate == null) throw new Error('Rate not available');
+  return { rate, date: data.date };
+}
+
+/** Returns Array<{date,rate}> or throws */
+async function getHistoricalRates(from, to) {
+  // 1 + 2: try both Frankfurter hosts
+  const { start, end } = getDateRange(30);
+  for (const host of FRANKFURTER_HOSTS) {
+    try {
+      const res = await timedFetch(
+        `${host}/${start}..${end}?from=${from}&to=${to}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        return Object.entries(data.rates).map(([date, rates]) => ({
+          date,
+          rate: rates[to],
+        }));
+      }
+    } catch { /* try next */ }
+  }
+  // 3: CDN fallback — sample every 3rd day (~10 points)
+  const dates = [];
+  for (let i = 29; i >= 0; i -= 3) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().slice(0, 10));
+  }
+  const results = await Promise.all(
+    dates.map(date =>
+      timedFetch(`${CDN_BASE}@${date}/v1/currencies/${from.toLowerCase()}.min.json`)
+        .then(r => (r.ok ? r.json() : null))
+        .catch(() => null)
+    )
+  );
+  const points = results
+    .filter(Boolean)
+    .map(data => ({
+      date: data.date,
+      rate: data[from.toLowerCase()]?.[to.toLowerCase()] ?? null,
+    }))
+    .filter(p => p.rate != null);
+  if (!points.length) throw new Error('No historical data available');
+  return points;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatAmount(value, code) {
@@ -229,12 +314,8 @@ export default function CurrencyConverter() {
     setRateLoading(true);
     setRateError(null);
     try {
-      const res = await fetch(
-        `https://api.frankfurter.app/latest?from=${fromCurrency}&to=${toCurrency}`
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setRate(data.rates[toCurrency]);
+      const { rate: r } = await getLatestRate(fromCurrency, toCurrency);
+      setRate(r);
       setUpdatedAt(new Date());
     } catch (err) {
       setRateError(err.message || 'Failed to fetch rate');
@@ -254,16 +335,7 @@ export default function CurrencyConverter() {
     setChartLoading(true);
     setChartError(null);
     try {
-      const { start, end } = getDateRange(30);
-      const res = await fetch(
-        `https://api.frankfurter.app/${start}..${end}?from=${fromCurrency}&to=${toCurrency}`
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const points = Object.entries(data.rates).map(([date, rates]) => ({
-        date,
-        rate: rates[toCurrency],
-      }));
+      const points = await getHistoricalRates(fromCurrency, toCurrency);
       setChartData(points);
     } catch (err) {
       setChartError(err.message || 'Failed to fetch chart');
