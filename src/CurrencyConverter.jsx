@@ -309,7 +309,8 @@ function useLocalStorage(key, initial) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function CurrencyDropdown({ value, onChange, label, darkMode }) {
+// align='left'|'right' controls which edge the dropdown panel snaps to
+function CurrencyDropdown({ value, onChange, label, darkMode, isFav, onToggleFav, align = 'left' }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const ref = useRef(null);
@@ -331,33 +332,58 @@ function CurrencyDropdown({ value, onChange, label, darkMode }) {
   const selected = CURRENCY_MAP[value];
 
   return (
-    <div className="flex flex-col gap-1 flex-1" ref={ref}>
+    <div className="flex flex-col gap-1 flex-1 min-w-0" ref={ref}>
       <span className={`text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
         {label}
       </span>
-      <button
-        type="button"
-        onClick={() => { setOpen(o => !o); setSearch(''); }}
-        className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-left transition-colors
-          ${darkMode
-            ? 'bg-zinc-800 border-zinc-700 hover:border-zinc-500 text-white'
-            : 'bg-white border-zinc-200 hover:border-zinc-400 text-zinc-900'
-          }`}
-      >
-        <span className="text-xl leading-none">{selected?.flag}</span>
-        <div className="flex flex-col min-w-0">
-          <span className="font-semibold text-sm">{selected?.code}</span>
-          <span className={`text-xs truncate ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>{selected?.name}</span>
-        </div>
-        <svg className="ml-auto w-4 h-4 shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+      {/* Trigger row: dropdown button + star */}
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => { setOpen(o => !o); setSearch(''); }}
+          className={`flex-1 min-w-0 flex items-center gap-1.5 px-2.5 py-2 rounded-xl border text-left transition-colors
+            ${darkMode
+              ? 'bg-zinc-800 border-zinc-700 hover:border-zinc-500 text-white'
+              : 'bg-white border-zinc-200 hover:border-zinc-400 text-zinc-900'
+            }`}
+        >
+          <span className="text-lg leading-none shrink-0">{selected?.flag}</span>
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="font-semibold text-sm">{selected?.code}</span>
+            <span className={`text-xs truncate ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>{selected?.name}</span>
+          </div>
+          <svg className="w-3.5 h-3.5 shrink-0 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {/* Star: save/remove this currency */}
+        {onToggleFav && (
+          <button
+            type="button"
+            onClick={onToggleFav}
+            className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-base
+              transition-colors
+              ${isFav
+                ? 'text-yellow-400'
+                : (darkMode ? 'text-zinc-600 hover:text-yellow-400' : 'text-zinc-300 hover:text-yellow-400')
+              }`}
+            aria-label={isFav ? `Remove ${value} from favourites` : `Save ${value}`}
+          >
+            {isFav ? '★' : '☆'}
+          </button>
+        )}
+      </div>
 
+      {/* Dropdown panel — snaps to left or right edge, never overflows */}
       {open && (
-        <div className={`absolute z-50 mt-1 w-64 rounded-xl shadow-xl border overflow-hidden
-          ${darkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-zinc-200'}`}
-          style={{ top: '100%', left: 0 }}
+        <div
+          className={`absolute z-50 mt-1 rounded-xl shadow-xl border overflow-hidden
+            ${darkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-zinc-200'}`}
+          style={{
+            top: '100%',
+            [align === 'right' ? 'right' : 'left']: 0,
+            width: 'min(16rem, calc(100vw - 1rem))',
+          }}
         >
           <div className={`px-2 pt-2 pb-1 border-b ${darkMode ? 'border-zinc-700' : 'border-zinc-100'}`}>
             <input
@@ -382,8 +408,8 @@ function CurrencyDropdown({ value, onChange, label, darkMode }) {
                       : (darkMode ? 'hover:bg-zinc-700 text-zinc-200' : 'hover:bg-zinc-50 text-zinc-800')
                     }`}
                 >
-                  <span className="text-base leading-none">{c.flag}</span>
-                  <span className="font-medium">{c.code}</span>
+                  <span className="text-base leading-none shrink-0">{c.flag}</span>
+                  <span className="font-medium shrink-0">{c.code}</span>
                   <span className={`text-xs truncate ${c.code === value ? 'opacity-75' : (darkMode ? 'text-zinc-400' : 'text-zinc-500')}`}>
                     {c.name}
                   </span>
@@ -438,8 +464,7 @@ export default function CurrencyConverter() {
   const [chartData, setChartData] = useState(null);
   const [chartLoading, setChartLoading] = useState(false);
   const [chartError, setChartError] = useState(null);
-  const [favourites, setFavourites] = useLocalStorage('cc-favourites', []);
-  const [favOpen, setFavOpen] = useState(true);
+  const [favCurrencies, setFavCurrencies] = useLocalStorage('cc-fav-currencies', []);
 
   const debouncedAmount = useDebounce(rawAmount, 300);
   const amount = parseFloat(debouncedAmount) || 0;
@@ -496,21 +521,11 @@ export default function CurrencyConverter() {
     return `${Math.round(diff / 60)}m ago`;
   }, [updatedAt, rate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Favourites helpers ───────────────────────────────────────────────────────
-  const favKey = `${fromCurrency}-${toCurrency}`;
-  const isFav = favourites.some(f => f.key === favKey);
-
-  const toggleFav = () => {
-    if (isFav) {
-      setFavourites(favourites.filter(f => f.key !== favKey));
-    } else {
-      setFavourites([...favourites, { key: favKey, from: fromCurrency, to: toCurrency }]);
-    }
-  };
-
-  const loadFav = fav => {
-    setFromCurrency(fav.from);
-    setToCurrency(fav.to);
+  // ── Favourites helpers (single currencies) ──────────────────────────────────
+  const toggleFavCurrency = code => {
+    setFavCurrencies(prev =>
+      prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+    );
   };
 
   // ── Swap ─────────────────────────────────────────────────────────────────────
@@ -562,8 +577,8 @@ export default function CurrencyConverter() {
   const dm = darkMode;
 
   return (
-    <div className={`min-h-screen flex items-start sm:items-center justify-center p-2 sm:p-4
-      transition-colors duration-300
+    <div className={`min-h-screen w-full overflow-x-hidden flex items-start sm:items-center
+      justify-center p-2 sm:p-4 transition-colors duration-300
       ${dm ? 'bg-zinc-950' : 'bg-gradient-to-br from-blue-50 via-white to-indigo-50'}`}>
       {/* ── Update toast ─────────────────────────────────────────────────────── */}
       {showUpdateToast && (
@@ -659,25 +674,35 @@ export default function CurrencyConverter() {
           </div>
 
           {/* ── Currency Selectors + Swap ────────────────────────────────────── */}
-          <div className="flex items-end gap-2 relative">
-            <div className="relative flex-1">
-              <CurrencyDropdown value={fromCurrency} onChange={setFromCurrency} label="From" darkMode={dm} />
+          <div className="flex items-end gap-2">
+            <div className="relative flex-1 min-w-0">
+              <CurrencyDropdown
+                value={fromCurrency} onChange={setFromCurrency} label="From" darkMode={dm}
+                align="left"
+                isFav={favCurrencies.includes(fromCurrency)}
+                onToggleFav={() => toggleFavCurrency(fromCurrency)}
+              />
             </div>
 
             <button
               type="button"
               onClick={handleSwap}
               style={{ transform: `rotate(${swapRotated ? 180 : 0}deg)`, transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)' }}
-              className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mb-0.5
-                font-bold text-lg shadow-md transition-colors
+              className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center mb-0.5
+                font-bold text-base shadow-md transition-colors
                 ${dm ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
               aria-label="Swap currencies"
             >
               ⇄
             </button>
 
-            <div className="relative flex-1">
-              <CurrencyDropdown value={toCurrency} onChange={setToCurrency} label="To" darkMode={dm} />
+            <div className="relative flex-1 min-w-0">
+              <CurrencyDropdown
+                value={toCurrency} onChange={setToCurrency} label="To" darkMode={dm}
+                align="right"
+                isFav={favCurrencies.includes(toCurrency)}
+                onToggleFav={() => toggleFavCurrency(toCurrency)}
+              />
             </div>
           </div>
 
@@ -703,24 +728,13 @@ export default function CurrencyConverter() {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-baseline gap-1.5 min-w-0">
-                    <span className={`text-3xl font-bold tracking-tight truncate ${dm ? 'text-white' : 'text-zinc-900'}`}>
-                      {formatAmount(converted, toCurrency)}
-                    </span>
-                    <span className={`text-base font-semibold shrink-0 ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                      {CURRENCY_MAP[toCurrency]?.code}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={toggleFav}
-                    className={`shrink-0 text-lg leading-none transition-transform hover:scale-125
-                      ${isFav ? 'text-yellow-400' : (dm ? 'text-zinc-600 hover:text-yellow-300' : 'text-zinc-300 hover:text-yellow-400')}`}
-                    aria-label={isFav ? 'Remove from favourites' : 'Add to favourites'}
-                  >
-                    {isFav ? '★' : '☆'}
-                  </button>
+                <div className="flex items-baseline gap-1.5 min-w-0">
+                  <span className={`text-3xl font-bold tracking-tight truncate ${dm ? 'text-white' : 'text-zinc-900'}`}>
+                    {formatAmount(converted, toCurrency)}
+                  </span>
+                  <span className={`text-base font-semibold shrink-0 ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    {CURRENCY_MAP[toCurrency]?.code}
+                  </span>
                 </div>
                 <p className={`text-xs ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
                   {rate != null
@@ -775,64 +789,38 @@ export default function CurrencyConverter() {
             )}
           </div>
 
-          {/* ── Favourites Panel ─────────────────────────────────────────────── */}
-          {favourites.length > 0 && (
-            <div className={`rounded-xl border overflow-hidden
-              ${dm ? 'border-zinc-800' : 'border-zinc-100'}`}>
-              {/* Header row: label left, toggle + count right */}
-              <div className={`flex items-center justify-between px-3 py-2
-                ${dm ? 'bg-zinc-800' : 'bg-zinc-50'}`}>
-                <span className={`text-xs font-semibold uppercase tracking-wider
-                  ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                  ⭐ Saved
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setFavOpen(o => !o)}
-                  className={`text-xs flex items-center gap-1
-                    ${dm ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'}`}
-                >
-                  {favourites.length}
-                  <svg
-                    className={`w-3 h-3 transition-transform ${favOpen ? '' : '-rotate-90'}`}
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+          {/* ── Quick-select currencies ───────────────────────────────────────── */}
+          {favCurrencies.length > 0 && (
+            <div>
+              <p className={`text-xs font-medium uppercase tracking-wider mb-2
+                ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                Quick select · tap to set FROM
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {favCurrencies.map(code => {
+                  const curr = CURRENCY_MAP[code];
+                  const isFrom = code === fromCurrency;
+                  const isTo   = code === toCurrency;
+                  return (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => setFromCurrency(code)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5
+                        rounded-xl text-sm font-medium border transition-colors
+                        ${isFrom
+                          ? 'bg-blue-500 border-blue-500 text-white'
+                          : isTo
+                            ? (dm ? 'bg-zinc-700 border-zinc-600 text-zinc-200' : 'bg-zinc-100 border-zinc-300 text-zinc-600')
+                            : (dm ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-blue-500' : 'bg-white border-zinc-200 text-zinc-700 hover:border-blue-400')
+                        }`}
+                    >
+                      <span className="text-base leading-none">{curr?.flag}</span>
+                      <span>{code}</span>
+                    </button>
+                  );
+                })}
               </div>
-
-              {/* Single horizontal-scroll row — no wrapping */}
-              {favOpen && (
-                <div
-                  className={`flex gap-2 px-3 py-2.5 overflow-x-auto ${dm ? 'bg-zinc-900' : 'bg-white'}`}
-                  style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
-                >
-                  {favourites.map(fav => {
-                    const fc = CURRENCY_MAP[fav.from];
-                    const tc = CURRENCY_MAP[fav.to];
-                    const active = fav.from === fromCurrency && fav.to === toCurrency;
-                    return (
-                      <button
-                        key={fav.key}
-                        type="button"
-                        onClick={() => loadFav(fav)}
-                        className={`inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1.5
-                          rounded-full text-xs font-medium border transition-colors
-                          ${active
-                            ? 'bg-blue-500 border-blue-500 text-white'
-                            : dm
-                              ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-blue-500'
-                              : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:border-blue-400'
-                          }`}
-                      >
-                        <span className="text-sm leading-none">{fc?.flag}{tc?.flag}</span>
-                        <span>{fav.from}→{fav.to}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           )}
 
