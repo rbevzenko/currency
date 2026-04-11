@@ -425,6 +425,9 @@ function CustomTooltip({ active, payload, darkMode }) {
 export default function CurrencyConverter() {
   const [darkMode, setDarkMode] = useLocalStorage('cc-dark', false);
   const [fromCurrency, setFromCurrency] = useState('USD');
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [showUpdateToast, setShowUpdateToast] = useState(false);
+  const [showOfflineToast, setShowOfflineToast] = useState(false);
   const [toCurrency, setToCurrency] = useState('EUR');
   const [rawAmount, setRawAmount] = useState('1');
   const [rate, setRate] = useState(null);
@@ -530,12 +533,63 @@ export default function CurrencyConverter() {
     return max * 1.002;
   }, [chartData]);
 
+  // ── PWA: capture install prompt ─────────────────────────────────────────────
+  useEffect(() => {
+    const handler = e => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  useEffect(() => {
+    const onUpdate = () => setShowUpdateToast(true);
+    const onOffline = () => { setShowOfflineToast(true); setTimeout(() => setShowOfflineToast(false), 3500); };
+    window.addEventListener('pwa-update-available', onUpdate);
+    window.addEventListener('pwa-offline-ready', onOffline);
+    return () => {
+      window.removeEventListener('pwa-update-available', onUpdate);
+      window.removeEventListener('pwa-offline-ready', onOffline);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') setInstallPrompt(null);
+  };
+
   // ─────────────────────────────────────────────────────────────────────────────
   const dm = darkMode;
 
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 transition-colors duration-300
       ${dm ? 'bg-zinc-950' : 'bg-gradient-to-br from-blue-50 via-white to-indigo-50'}`}>
+      {/* ── Update toast ─────────────────────────────────────────────────────── */}
+      {showUpdateToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3
+          px-4 py-3 rounded-xl shadow-xl bg-blue-600 text-white text-sm font-medium
+          animate-fadeIn max-w-xs w-full mx-4">
+          <span className="flex-1">New version available</span>
+          <button
+            type="button"
+            onClick={() => { window.__swUpdate?.(true); setShowUpdateToast(false); }}
+            className="px-3 py-1 rounded-lg bg-white text-blue-600 text-xs font-semibold hover:bg-blue-50 transition-colors"
+          >
+            Update
+          </button>
+          <button type="button" onClick={() => setShowUpdateToast(false)} className="opacity-70 hover:opacity-100">✕</button>
+        </div>
+      )}
+
+      {/* ── Offline-ready toast ───────────────────────────────────────────────── */}
+      {showOfflineToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50
+          px-4 py-3 rounded-xl shadow-xl bg-emerald-600 text-white text-sm font-medium
+          animate-fadeIn max-w-xs w-full mx-4">
+          ✓ Ready to work offline
+        </div>
+      )}
+
       <div className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transition-colors duration-300
         ${dm ? 'bg-zinc-900' : 'bg-white'}`}>
 
@@ -548,15 +602,36 @@ export default function CurrencyConverter() {
               Currency Converter
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setDarkMode(!dm)}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors
-              ${dm ? 'bg-zinc-800 hover:bg-zinc-700 text-yellow-400' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600'}`}
-            aria-label="Toggle dark mode"
-          >
-            {dm ? '☀' : '🌙'}
-          </button>
+          <div className="flex items-center gap-2">
+            {installPrompt && (
+              <button
+                type="button"
+                onClick={handleInstall}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
+                  transition-colors border
+                  ${dm
+                    ? 'bg-blue-600 border-blue-500 hover:bg-blue-500 text-white'
+                    : 'bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700'
+                  }`}
+                aria-label="Install app"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Install
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setDarkMode(!dm)}
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors
+                ${dm ? 'bg-zinc-800 hover:bg-zinc-700 text-yellow-400' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600'}`}
+              aria-label="Toggle dark mode"
+            >
+              {dm ? '☀' : '🌙'}
+            </button>
+          </div>
         </div>
 
         <div className="p-5 flex flex-col gap-5">
