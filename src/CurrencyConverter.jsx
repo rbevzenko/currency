@@ -338,7 +338,7 @@ function CurrencyDropdown({ value, onChange, label, darkMode }) {
       <button
         type="button"
         onClick={() => { setOpen(o => !o); setSearch(''); }}
-        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-left transition-colors
+        className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-left transition-colors
           ${darkMode
             ? 'bg-zinc-800 border-zinc-700 hover:border-zinc-500 text-white'
             : 'bg-white border-zinc-200 hover:border-zinc-400 text-zinc-900'
@@ -562,7 +562,8 @@ export default function CurrencyConverter() {
   const dm = darkMode;
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 transition-colors duration-300
+    <div className={`min-h-screen flex items-start sm:items-center justify-center p-2 sm:p-4
+      transition-colors duration-300
       ${dm ? 'bg-zinc-950' : 'bg-gradient-to-br from-blue-50 via-white to-indigo-50'}`}>
       {/* ── Update toast ─────────────────────────────────────────────────────── */}
       {showUpdateToast && (
@@ -594,7 +595,7 @@ export default function CurrencyConverter() {
         ${dm ? 'bg-zinc-900' : 'bg-white'}`}>
 
         {/* ── Header ──────────────────────────────────────────────────────────── */}
-        <div className={`flex items-center justify-between px-5 py-4 border-b
+        <div className={`flex items-center justify-between px-4 py-3 border-b
           ${dm ? 'border-zinc-800' : 'border-zinc-100'}`}>
           <div className="flex items-center gap-2">
             <span className="text-xl">💱</span>
@@ -634,11 +635,14 @@ export default function CurrencyConverter() {
           </div>
         </div>
 
-        <div className="p-5 flex flex-col gap-5">
+        <div className="px-4 pt-3 pb-4 flex flex-col gap-3">
 
           {/* ── Amount Input ─────────────────────────────────────────────────── */}
-          <div className="flex flex-col gap-1">
-            <label className={`text-xs font-medium uppercase tracking-wider ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors
+            focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent
+            ${dm ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-zinc-200'}`}>
+            <label className={`text-xs font-medium uppercase tracking-wider shrink-0
+              ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
               Amount
             </label>
             <input
@@ -649,12 +653,8 @@ export default function CurrencyConverter() {
               value={rawAmount}
               onChange={e => setRawAmount(e.target.value)}
               placeholder="1"
-              className={`w-full px-4 py-3 rounded-xl border text-lg font-semibold outline-none transition-colors
-                focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                ${dm
-                  ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500'
-                  : 'bg-white border-zinc-200 text-zinc-900 placeholder-zinc-400'
-                }`}
+              className={`flex-1 min-w-0 py-1 bg-transparent text-base font-semibold outline-none
+                ${dm ? 'text-white placeholder-zinc-500' : 'text-zinc-900 placeholder-zinc-400'}`}
             />
           </div>
 
@@ -682,36 +682,46 @@ export default function CurrencyConverter() {
           </div>
 
           {/* ── Conversion Result ────────────────────────────────────────────── */}
-          <div className={`rounded-2xl px-5 py-4 flex flex-col gap-1
+          <div className={`rounded-2xl px-4 py-3 flex flex-col gap-0.5
             ${dm ? 'bg-zinc-800' : 'bg-blue-50'}`}>
 
             {rateLoading ? (
-              <div className="flex flex-col gap-2">
-                <div className={`h-10 w-48 rounded-lg animate-pulse ${dm ? 'bg-zinc-700' : 'bg-blue-100'}`} />
-                <div className={`h-4 w-32 rounded animate-pulse ${dm ? 'bg-zinc-700' : 'bg-blue-100'}`} />
+              <div className="flex flex-col gap-2 py-1">
+                <div className={`h-8 w-40 rounded-lg animate-pulse ${dm ? 'bg-zinc-700' : 'bg-blue-100'}`} />
+                <div className={`h-3.5 w-28 rounded animate-pulse ${dm ? 'bg-zinc-700' : 'bg-blue-100'}`} />
               </div>
             ) : rateError ? (
-              <div className="flex flex-col gap-2">
-                <p className="text-red-400 text-sm font-medium">⚠ {rateError}</p>
+              <div className="flex items-center gap-3">
+                <p className="text-red-400 text-sm font-medium flex-1">⚠ {rateError}</p>
                 <button
                   type="button"
                   onClick={fetchRate}
-                  className="self-start px-3 py-1 text-xs font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
+                  className="shrink-0 px-3 py-1 text-xs font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
                 >
                   Retry
                 </button>
               </div>
             ) : (
               <>
-                <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className={`text-4xl font-bold tracking-tight ${dm ? 'text-white' : 'text-zinc-900'}`}>
-                    {formatAmount(converted, toCurrency)}
-                  </span>
-                  <span className={`text-xl font-medium ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                    {CURRENCY_MAP[toCurrency]?.code}
-                  </span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-baseline gap-1.5 min-w-0">
+                    <span className={`text-3xl font-bold tracking-tight truncate ${dm ? 'text-white' : 'text-zinc-900'}`}>
+                      {formatAmount(converted, toCurrency)}
+                    </span>
+                    <span className={`text-base font-semibold shrink-0 ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                      {CURRENCY_MAP[toCurrency]?.code}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={toggleFav}
+                    className={`shrink-0 text-lg leading-none transition-transform hover:scale-125
+                      ${isFav ? 'text-yellow-400' : (dm ? 'text-zinc-600 hover:text-yellow-300' : 'text-zinc-300 hover:text-yellow-400')}`}
+                    aria-label={isFav ? 'Remove from favourites' : 'Add to favourites'}
+                  >
+                    {isFav ? '★' : '☆'}
+                  </button>
                 </div>
-
                 <p className={`text-xs ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
                   {rate != null
                     ? `1 ${fromCurrency} = ${formatAmount(rate, toCurrency)} ${toCurrency} · updated ${updatedLabel}`
@@ -720,45 +730,28 @@ export default function CurrencyConverter() {
                 </p>
               </>
             )}
-
-            {/* Star / Favourite button */}
-            {!rateLoading && !rateError && (
-              <button
-                type="button"
-                onClick={toggleFav}
-                className={`self-end mt-1 text-xl leading-none transition-transform hover:scale-125
-                  ${isFav ? 'text-yellow-400' : (dm ? 'text-zinc-600 hover:text-yellow-300' : 'text-zinc-300 hover:text-yellow-400')}`}
-                aria-label={isFav ? 'Remove from favourites' : 'Add to favourites'}
-              >
-                {isFav ? '★' : '☆'}
-              </button>
-            )}
           </div>
 
           {/* ── Mini Chart ───────────────────────────────────────────────────── */}
-          <div className="flex flex-col gap-2">
-            <span className={`text-xs font-medium uppercase tracking-wider ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
-              30-day rate · {fromCurrency}/{toCurrency}
-            </span>
+          <div className={`rounded-xl overflow-hidden ${dm ? 'bg-zinc-800/60' : 'bg-zinc-50'}`}>
+            <div className="flex items-center justify-between px-3 pt-2.5 pb-1">
+              <span className={`text-xs font-medium uppercase tracking-wider ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                30d · {fromCurrency}/{toCurrency}
+              </span>
+            </div>
 
             {chartLoading ? (
-              <ChartSkeleton darkMode={dm} />
+              <div className={`h-12 mx-3 mb-2.5 rounded-lg animate-pulse ${dm ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
             ) : chartError ? (
-              <div className={`h-20 rounded-xl flex items-center justify-center gap-2 text-sm
-                ${dm ? 'bg-zinc-800 text-zinc-500' : 'bg-zinc-50 text-zinc-400'}`}>
+              <div className={`h-12 mx-3 mb-2.5 rounded-lg flex items-center justify-center gap-2 text-xs
+                ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
                 <span>Chart unavailable</span>
-                <button
-                  type="button"
-                  onClick={fetchChart}
-                  className="text-xs underline hover:no-underline"
-                >
-                  Retry
-                </button>
+                <button type="button" onClick={fetchChart} className="underline hover:no-underline">Retry</button>
               </div>
             ) : chartData?.length ? (
-              <div className="h-20 w-full animate-fadeIn">
+              <div className="h-14 w-full animate-fadeIn">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
+                  <LineChart data={chartData} margin={{ top: 2, right: 8, left: 8, bottom: 2 }}>
                     <Line
                       type="monotone"
                       dataKey="rate"
@@ -775,8 +768,8 @@ export default function CurrencyConverter() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className={`h-20 rounded-xl flex items-center justify-center text-sm
-                ${dm ? 'bg-zinc-800 text-zinc-500' : 'bg-zinc-50 text-zinc-400'}`}>
+              <div className={`h-10 mx-3 mb-2.5 flex items-center justify-center text-xs
+                ${dm ? 'text-zinc-600' : 'text-zinc-400'}`}>
                 Same currency — no chart
               </div>
             )}
@@ -786,23 +779,35 @@ export default function CurrencyConverter() {
           {favourites.length > 0 && (
             <div className={`rounded-xl border overflow-hidden
               ${dm ? 'border-zinc-800' : 'border-zinc-100'}`}>
-              <button
-                type="button"
-                onClick={() => setFavOpen(o => !o)}
-                className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold uppercase tracking-wider
-                  ${dm ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-750' : 'bg-zinc-50 text-zinc-500 hover:bg-zinc-100'}`}
-              >
-                <span>⭐ Favourites ({favourites.length})</span>
-                <svg
-                  className={`w-3.5 h-3.5 transition-transform ${favOpen ? '' : '-rotate-90'}`}
-                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              {/* Header row: label left, toggle + count right */}
+              <div className={`flex items-center justify-between px-3 py-2
+                ${dm ? 'bg-zinc-800' : 'bg-zinc-50'}`}>
+                <span className={`text-xs font-semibold uppercase tracking-wider
+                  ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                  ⭐ Saved
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFavOpen(o => !o)}
+                  className={`text-xs flex items-center gap-1
+                    ${dm ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'}`}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+                  {favourites.length}
+                  <svg
+                    className={`w-3 h-3 transition-transform ${favOpen ? '' : '-rotate-90'}`}
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
 
+              {/* Single horizontal-scroll row — no wrapping */}
               {favOpen && (
-                <div className={`px-3 py-2.5 flex flex-wrap gap-2 ${dm ? 'bg-zinc-900' : 'bg-white'}`}>
+                <div
+                  className={`flex gap-2 px-3 py-2.5 overflow-x-auto ${dm ? 'bg-zinc-900' : 'bg-white'}`}
+                  style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+                >
                   {favourites.map(fav => {
                     const fc = CURRENCY_MAP[fav.from];
                     const tc = CURRENCY_MAP[fav.to];
@@ -812,8 +817,8 @@ export default function CurrencyConverter() {
                         key={fav.key}
                         type="button"
                         onClick={() => loadFav(fav)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
-                          border transition-colors
+                        className={`inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1.5
+                          rounded-full text-xs font-medium border transition-colors
                           ${active
                             ? 'bg-blue-500 border-blue-500 text-white'
                             : dm
@@ -821,8 +826,8 @@ export default function CurrencyConverter() {
                               : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:border-blue-400'
                           }`}
                       >
-                        <span>{fc?.flag}{tc?.flag}</span>
-                        <span>{fav.from} → {fav.to}</span>
+                        <span className="text-sm leading-none">{fc?.flag}{tc?.flag}</span>
+                        <span>{fav.from}→{fav.to}</span>
                       </button>
                     );
                   })}
