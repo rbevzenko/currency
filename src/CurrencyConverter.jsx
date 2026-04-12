@@ -296,9 +296,10 @@ const ZERO_DECIMAL = new Set([
 
 function formatAmount(value, code) {
   if (value == null || isNaN(value)) return '—';
+  const maxFraction = ZERO_DECIMAL.has(code) ? 0 : 4;
   return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: ZERO_DECIMAL.has(code) ? 0 : 4,
+    minimumFractionDigits: Math.min(2, maxFraction),
+    maximumFractionDigits: maxFraction,
   }).format(value);
 }
 
@@ -328,9 +329,12 @@ function useLocalStorage(key, initial) {
       return initial;
     }
   });
-  const set = useCallback(v => {
-    setValue(v);
-    try { localStorage.setItem(key, JSON.stringify(v)); } catch {}
+  const set = useCallback(valOrFn => {
+    setValue(prev => {
+      const next = typeof valOrFn === 'function' ? valOrFn(prev) : valOrFn;
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+      return next;
+    });
   }, [key]);
   return [value, set];
 }
