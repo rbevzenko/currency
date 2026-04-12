@@ -315,6 +315,28 @@ async function getHistoricalRates(from, to) {
   return points;
 }
 
+/** Returns { rate, date } for a specific date, trying Frankfurter then CDN */
+async function getRateAtDate(from, to, date) {
+  for (const host of FRANKFURTER_HOSTS) {
+    try {
+      const res = await timedFetch(`${host}/${date}?from=${from}&to=${to}`);
+      if (res.ok) {
+        const data = await res.json();
+        return { rate: data.rates[to], date: data.date };
+      }
+    } catch { /* try next */ }
+  }
+  // CDN fallback
+  const res = await timedFetch(
+    `${CDN_BASE}@${date}/v1/currencies/${from.toLowerCase()}.min.json`
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  const r = data[from.toLowerCase()]?.[to.toLowerCase()];
+  if (r == null) throw new Error('Rate not available for this date');
+  return { rate: r, date: data.date ?? date };
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Returns { [code]: rate, ... } for all targets in one request */
@@ -752,6 +774,41 @@ export default function CurrencyConverter() {
     return `${Math.round(diff / 60)}m ago`;
   }, [updatedAt, rate]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Trend: compare current rate vs 30-day-ago first chart point ─────────────
+  const trend = useMemo(() => {
+    if (!chartData?.length || rate == null) return null;
+    const first = chartData[0].rate;
+    if (!first) return null;
+    const pct = ((rate - first) / first) * 100;
+    return { pct, up: pct >= 0 };
+  }, [chartData, rate]);
+
+  // ── Historical rate lookup ───────────────────────────────────────────────────
+  const [histDate, setHistDate] = useState('');
+  const [histRate, setHistRate] = useState(null);
+  const [histActualDate, setHistActualDate] = useState(null);
+  const [histLoading, setHistLoading] = useState(false);
+  const [histError, setHistError] = useState(null);
+
+  // Clear stale result when the currency pair changes
+  useEffect(() => { setHistRate(null); setHistActualDate(null); setHistError(null); }, [fromCurrency, toCurrency]);
+
+  const fetchHistRate = useCallback(async () => {
+    if (!histDate) return;
+    setHistLoading(true);
+    setHistError(null);
+    setHistRate(null);
+    try {
+      const { rate: r, date: d } = await getRateAtDate(fromCurrency, toCurrency, histDate);
+      setHistRate(r);
+      setHistActualDate(d);
+    } catch (err) {
+      setHistError(err.message || 'Rate not available for this date');
+    } finally {
+      setHistLoading(false);
+    }
+  }, [fromCurrency, toCurrency, histDate]);
+
   // ── Multi-tab fetch ──────────────────────────────────────────────────────────
   const fetchMultiRates = useCallback(async () => {
     const targets = favCurrencies.filter(t => t !== multiBase);
@@ -1019,13 +1076,22 @@ export default function CurrencyConverter() {
               </div>
             ) : (
               <>
-                <div className="flex items-baseline gap-1.5 min-w-0">
+                <div className="flex items-baseline gap-1.5 min-w-0 flex-wrap">
                   <span className={`text-3xl font-bold tracking-tight truncate ${dm ? 'text-white' : 'text-zinc-900'}`}>
                     {formatAmount(converted, toCurrency)}
                   </span>
                   <span className={`text-base font-semibold shrink-0 ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
                     {CURRENCY_MAP[toCurrency]?.code}
                   </span>
+                  {trend && (
+                    <span className={`shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-md
+                      ${trend.up
+                        ? (dm ? 'text-emerald-400 bg-emerald-950/60' : 'text-emerald-700 bg-emerald-50')
+                        : (dm ? 'text-red-400 bg-red-950/60' : 'text-red-700 bg-red-50')
+                      }`}>
+                      {trend.up ? '↑' : '↓'} {trend.pct > 0 ? '+' : ''}{trend.pct.toFixed(2)}%
+                    </span>
+                  )}
                 </div>
                 <p className={`text-xs ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
                   {rate != null
@@ -1076,6 +1142,69 @@ export default function CurrencyConverter() {
               <div className={`h-10 mx-3 mb-2.5 flex items-center justify-center text-xs
                 ${dm ? 'text-zinc-600' : 'text-zinc-400'}`}>
                 Same currency — no chart
+              </div>
+            )}
+          </div>
+
+          {/* ── Historical Rate ──────────────────────────────────────────────── */}
+          <div className={`rounded-xl px-3 pt-2.5 pb-3 ${dm ? 'bg-zinc-800/60' : 'bg-zinc-50'}`}>
+            <p className={`text-xs font-medium uppercase tracking-wider mb-2
+              ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>Rate on date</p>
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={histDate}
+                onChange={e => setHistDate(e.target.value)}
+                min="1999-01-04"
+                max={new Date(Date.now() - 86400000).toISOString().slice(0, 10)}
+                className={`flex-1 min-w-0 px-2.5 py-1.5 rounded-xl border text-sm outline-none
+                  focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
+                  ${dm ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}
+              />
+              <button
+                type="button"
+                onClick={fetchHistRate}
+                disabled={!histDate || histLoading || fromCurrency === toCurrency}
+                className={`shrink-0 px-3 py-1.5 rounded-xl text-sm font-semibold transition-colors
+                  disabled:opacity-40
+                  ${dm ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+              >
+                {histLoading ? '…' : 'Go'}
+              </button>
+            </div>
+
+            {histError && (
+              <p className="text-red-400 text-xs mt-2">⚠ {histError}</p>
+            )}
+
+            {histRate != null && !histLoading && (
+              <div className={`mt-2.5 pt-2.5 border-t ${dm ? 'border-zinc-700' : 'border-zinc-200'}`}>
+                <p className={`text-xs mb-1 ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                  {histActualDate}
+                  {histActualDate !== histDate && (
+                    <span className="ml-1 opacity-60">(nearest trading day)</span>
+                  )}
+                </p>
+                <div className="flex items-baseline gap-1.5 flex-wrap">
+                  <span className={`text-xl font-bold ${dm ? 'text-white' : 'text-zinc-900'}`}>
+                    {formatAmount(amount * histRate, toCurrency)}
+                  </span>
+                  <span className={`text-sm font-medium ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    {toCurrency}
+                  </span>
+                  <span className={`text-xs ${dm ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                    · 1 {fromCurrency} = {formatAmount(histRate, toCurrency)} {toCurrency}
+                  </span>
+                </div>
+                {rate != null && (
+                  <p className={`text-xs mt-0.5 ${dm ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                    {(() => {
+                      const diff = ((rate - histRate) / histRate) * 100;
+                      const sign = diff >= 0 ? '+' : '';
+                      return `vs today: ${sign}${diff.toFixed(2)}%`;
+                    })()}
+                  </p>
+                )}
               </div>
             )}
           </div>
