@@ -173,6 +173,63 @@ const CURRENCIES = [
 
 const CURRENCY_MAP = Object.fromEntries(CURRENCIES.map(c => [c.code, c]));
 
+// ─── Crypto Data ──────────────────────────────────────────────────────────────
+
+const CRYPTOS = [
+  { id: 'bitcoin',                   symbol: 'BTC',   name: 'Bitcoin'           },
+  { id: 'ethereum',                  symbol: 'ETH',   name: 'Ethereum'          },
+  { id: 'tether',                    symbol: 'USDT',  name: 'Tether'            },
+  { id: 'binancecoin',               symbol: 'BNB',   name: 'BNB'               },
+  { id: 'solana',                    symbol: 'SOL',   name: 'Solana'            },
+  { id: 'ripple',                    symbol: 'XRP',   name: 'XRP'               },
+  { id: 'usd-coin',                  symbol: 'USDC',  name: 'USD Coin'          },
+  { id: 'cardano',                   symbol: 'ADA',   name: 'Cardano'           },
+  { id: 'avalanche-2',               symbol: 'AVAX',  name: 'Avalanche'         },
+  { id: 'dogecoin',                  symbol: 'DOGE',  name: 'Dogecoin'          },
+  { id: 'polkadot',                  symbol: 'DOT',   name: 'Polkadot'          },
+  { id: 'matic-network',             symbol: 'MATIC', name: 'Polygon'           },
+  { id: 'shiba-inu',                 symbol: 'SHIB',  name: 'Shiba Inu'         },
+  { id: 'litecoin',                  symbol: 'LTC',   name: 'Litecoin'          },
+  { id: 'chainlink',                 symbol: 'LINK',  name: 'Chainlink'         },
+  { id: 'uniswap',                   symbol: 'UNI',   name: 'Uniswap'           },
+  { id: 'stellar',                   symbol: 'XLM',   name: 'Stellar'           },
+  { id: 'monero',                    symbol: 'XMR',   name: 'Monero'            },
+  { id: 'ethereum-classic',          symbol: 'ETC',   name: 'Ethereum Classic'  },
+  { id: 'cosmos',                    symbol: 'ATOM',  name: 'Cosmos'            },
+  { id: 'near',                      symbol: 'NEAR',  name: 'NEAR Protocol'     },
+  { id: 'tron',                      symbol: 'TRX',   name: 'TRON'              },
+  { id: 'aave',                      symbol: 'AAVE',  name: 'Aave'              },
+  { id: 'algorand',                  symbol: 'ALGO',  name: 'Algorand'          },
+  { id: 'the-graph',                 symbol: 'GRT',   name: 'The Graph'         },
+  { id: 'maker',                     symbol: 'MKR',   name: 'Maker'             },
+  { id: 'internet-computer',         symbol: 'ICP',   name: 'Internet Computer' },
+  { id: 'bitcoin-cash',              symbol: 'BCH',   name: 'Bitcoin Cash'      },
+  { id: 'filecoin',                  symbol: 'FIL',   name: 'Filecoin'          },
+  { id: 'vechain',                   symbol: 'VET',   name: 'VeChain'           },
+  { id: 'hedera-hashgraph',          symbol: 'HBAR',  name: 'Hedera'            },
+  { id: 'fantom',                    symbol: 'FTM',   name: 'Fantom'            },
+  { id: 'theta-token',               symbol: 'THETA', name: 'Theta Network'     },
+  { id: 'injective-protocol',        symbol: 'INJ',   name: 'Injective'         },
+  { id: 'arbitrum',                  symbol: 'ARB',   name: 'Arbitrum'          },
+  { id: 'optimism',                  symbol: 'OP',    name: 'Optimism'          },
+  { id: 'sui',                       symbol: 'SUI',   name: 'Sui'               },
+  { id: 'aptos',                     symbol: 'APT',   name: 'Aptos'             },
+  { id: 'cronos',                    symbol: 'CRO',   name: 'Cronos'            },
+  { id: 'quant-network',             symbol: 'QNT',   name: 'Quant'             },
+  { id: 'flow',                      symbol: 'FLOW',  name: 'Flow'              },
+  { id: 'sandbox',                   symbol: 'SAND',  name: 'The Sandbox'       },
+  { id: 'decentraland',              symbol: 'MANA',  name: 'Decentraland'      },
+  { id: 'axie-infinity',             symbol: 'AXS',   name: 'Axie Infinity'     },
+  { id: 'eos',                       symbol: 'EOS',   name: 'EOS'               },
+  { id: 'dash',                      symbol: 'DASH',  name: 'Dash'              },
+  { id: 'zcash',                     symbol: 'ZEC',   name: 'Zcash'             },
+  { id: 'chiliz',                    symbol: 'CHZ',   name: 'Chiliz'            },
+  { id: 'compound-governance-token', symbol: 'COMP',  name: 'Compound'          },
+  { id: 'apecoin',                   symbol: 'APE',   name: 'ApeCoin'           },
+];
+
+const CRYPTO_MAP = Object.fromEntries(CRYPTOS.map(c => [c.id, c]));
+
 // ─── API helpers (Frankfurter → CDN fallback) ────────────────────────────────
 
 const FRANKFURTER_HOSTS = [
@@ -286,6 +343,18 @@ async function getMultiRates(from, targets) {
     if (r != null) result[t] = r;
   }
   return result;
+}
+
+/** Returns { usd: number, eur: number, ... } for the given coin */
+async function getCryptoRates(coinId, fiatCurrencies) {
+  const vs = [...new Set(['usd', ...fiatCurrencies.map(c => c.toLowerCase())])].join(',');
+  const res = await timedFetch(
+    `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=${vs}`,
+    10000
+  );
+  if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);
+  const data = await res.json();
+  return data[coinId] ?? {};
 }
 
 // ISO 4217 currencies with no minor unit (zero decimal places)
@@ -478,6 +547,118 @@ function CustomTooltip({ active, payload, darkMode }) {
   );
 }
 
+function formatCryptoPrice(value) {
+  if (value == null || isNaN(value)) return '—';
+  if (value === 0) return '0.00';
+  const abs = Math.abs(value);
+  let opts;
+  if (abs >= 10000)      opts = { minimumFractionDigits: 0, maximumFractionDigits: 2 };
+  else if (abs >= 1000)  opts = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+  else if (abs >= 1)     opts = { minimumFractionDigits: 2, maximumFractionDigits: 4 };
+  else if (abs >= 0.001) opts = { minimumFractionDigits: 4, maximumFractionDigits: 6 };
+  else                   opts = { minimumFractionDigits: 2, maximumFractionDigits: 10 };
+  return new Intl.NumberFormat('en-US', opts).format(value);
+}
+
+function CryptoDropdown({ value, onChange, darkMode }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+
+  const filtered = useMemo(() =>
+    CRYPTOS.filter(c =>
+      c.symbol.toLowerCase().includes(search.toLowerCase()) ||
+      c.name.toLowerCase().includes(search.toLowerCase())
+    ), [search]);
+
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const selected = CRYPTO_MAP[value];
+
+  return (
+    <div className="flex flex-col gap-1 flex-1 min-w-0 relative" ref={ref}>
+      <span className={`text-xs font-medium uppercase tracking-wider
+        ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Coin</span>
+      <button
+        type="button"
+        onClick={() => { setOpen(o => !o); setSearch(''); }}
+        className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-left transition-colors
+          ${darkMode
+            ? 'bg-zinc-800 border-zinc-700 hover:border-zinc-500 text-white'
+            : 'bg-white border-zinc-200 hover:border-zinc-400 text-zinc-900'
+          }`}
+      >
+        <span className={`shrink-0 text-xs font-bold px-1.5 py-0.5 rounded-md
+          ${darkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-50 text-amber-600'}`}>
+          {selected?.symbol}
+        </span>
+        <span className={`flex-1 text-sm truncate ${darkMode ? 'text-zinc-300' : 'text-zinc-700'}`}>
+          {selected?.name}
+        </span>
+        <svg className="w-3.5 h-3.5 shrink-0 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className={`absolute z-50 rounded-xl shadow-xl border overflow-hidden
+            ${darkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-zinc-200'}`}
+          style={{ top: '100%', left: 0, width: 'min(18rem, calc(100vw - 1rem))' }}
+        >
+          <div className={`px-2 pt-2 pb-1 border-b ${darkMode ? 'border-zinc-700' : 'border-zinc-100'}`}>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Search coin…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className={`w-full px-2 py-1.5 text-sm rounded-lg outline-none
+                ${darkMode ? 'bg-zinc-700 text-white placeholder-zinc-400'
+                           : 'bg-zinc-50 text-zinc-900 placeholder-zinc-400'}`}
+            />
+          </div>
+          <ul className="max-h-56 overflow-y-auto">
+            {filtered.map(c => (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  onClick={() => { onChange(c.id); setOpen(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors
+                    ${c.id === value
+                      ? (darkMode ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700')
+                      : (darkMode ? 'hover:bg-zinc-700 text-zinc-200' : 'hover:bg-zinc-50 text-zinc-800')
+                    }`}
+                >
+                  <span className={`shrink-0 text-xs font-bold w-12 text-center px-1 py-0.5 rounded
+                    ${c.id === value
+                      ? (darkMode ? 'bg-white/20' : 'bg-blue-100')
+                      : (darkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-50 text-amber-600')
+                    }`}>
+                    {c.symbol}
+                  </span>
+                  <span className={`truncate text-xs ${c.id === value ? 'opacity-80' : (darkMode ? 'text-zinc-400' : 'text-zinc-500')}`}>
+                    {c.name}
+                  </span>
+                </button>
+              </li>
+            ))}
+            {filtered.length === 0 && (
+              <li className={`px-3 py-4 text-center text-sm ${darkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                No coins found
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CurrencyConverter() {
@@ -505,6 +686,13 @@ export default function CurrencyConverter() {
   const [multiRates, setMultiRates] = useState(null);
   const [multiLoading, setMultiLoading] = useState(false);
   const [multiError, setMultiError] = useState(null);
+
+  // ── Crypto-tab state ─────────────────────────────────────────────────────────
+  const [cryptoCoin, setCryptoCoin] = useLocalStorage('cc-crypto-coin', 'bitcoin');
+  const [cryptoRawAmount, setCryptoRawAmount] = useState('1');
+  const [cryptoRates, setCryptoRates] = useState(null);
+  const [cryptoLoading, setCryptoLoading] = useState(false);
+  const [cryptoError, setCryptoError] = useState(null);
 
   const debouncedMultiAmount = useDebounce(multiRawAmount, 300);
   const multiAmount = parseFloat(debouncedMultiAmount) || 0;
@@ -581,6 +769,22 @@ export default function CurrencyConverter() {
   }, [multiBase, favCurrencies]);
 
   useEffect(() => { if (activeTab === 'multi') fetchMultiRates(); }, [fetchMultiRates, activeTab]);
+
+  // ── Crypto-tab fetch ─────────────────────────────────────────────────────────
+  const fetchCryptoRates = useCallback(async () => {
+    setCryptoLoading(true);
+    setCryptoError(null);
+    try {
+      const rates = await getCryptoRates(cryptoCoin, favCurrencies);
+      setCryptoRates(rates);
+    } catch (err) {
+      setCryptoError(err.message || 'Failed to fetch crypto rates');
+    } finally {
+      setCryptoLoading(false);
+    }
+  }, [cryptoCoin, favCurrencies]);
+
+  useEffect(() => { if (activeTab === 'crypto') fetchCryptoRates(); }, [fetchCryptoRates, activeTab]);
 
   // ── Favourites helpers (single currencies) ──────────────────────────────────
   const toggleFavCurrency = code => {
@@ -716,6 +920,7 @@ export default function CurrencyConverter() {
           {[
             { id: 'converter', icon: '⇄', label: 'Converter' },
             { id: 'multi',     icon: '⊞', label: 'Multi' },
+            { id: 'crypto',    icon: '₿',  label: 'Crypto' },
           ].map(({ id, icon, label }) => (
             <button
               key={id}
@@ -1031,6 +1236,112 @@ export default function CurrencyConverter() {
 
         </div>
         )} {/* end multi tab */}
+
+        {/* ════════════ CRYPTO TAB ════════════ */}
+        {activeTab === 'crypto' && (
+        <div className="px-4 pt-3 pb-4 flex flex-col gap-3">
+
+          {/* ── Coin selector + Amount ───────────────────────────────────────── */}
+          <div className="flex gap-2 items-end">
+            <div className="relative flex-1 min-w-0">
+              <CryptoDropdown
+                value={cryptoCoin}
+                onChange={v => { setCryptoCoin(v); setCryptoRates(null); }}
+                darkMode={dm}
+              />
+            </div>
+            <div className="w-28 shrink-0 flex flex-col gap-1">
+              <label className={`text-xs font-medium uppercase tracking-wider
+                ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>Amount</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="any"
+                value={cryptoRawAmount}
+                onChange={e => setCryptoRawAmount(e.target.value)}
+                placeholder="1"
+                className={`w-full px-3 py-2 rounded-xl border text-base font-semibold outline-none
+                  focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors
+                  ${dm ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500'
+                       : 'bg-white border-zinc-200 text-zinc-900 placeholder-zinc-400'}`}
+              />
+            </div>
+          </div>
+
+          {/* ── Prices list ──────────────────────────────────────────────────── */}
+          <div className={`rounded-2xl overflow-hidden ${dm ? 'bg-zinc-800' : 'bg-zinc-50'}`}>
+            {/* Header */}
+            <div className={`flex items-center justify-between px-3 py-2 border-b
+              ${dm ? 'border-zinc-700' : 'border-zinc-200'}`}>
+              <span className={`text-xs font-semibold uppercase tracking-wider
+                ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                {CRYPTO_MAP[cryptoCoin]?.symbol} price
+              </span>
+              <button
+                type="button"
+                onClick={fetchCryptoRates}
+                className={`text-xs ${dm ? 'text-zinc-500 hover:text-amber-400' : 'text-zinc-400 hover:text-amber-500'}`}
+              >
+                ↻ Refresh
+              </button>
+            </div>
+
+            {/* Error */}
+            {cryptoError && (
+              <div className="flex items-center gap-3 px-4 py-3">
+                <p className="text-red-400 text-sm flex-1">⚠ {cryptoError}</p>
+                <button type="button" onClick={fetchCryptoRates}
+                  className="text-xs px-2 py-1 rounded-lg bg-red-500 text-white">Retry</button>
+              </div>
+            )}
+
+            {/* Rows: USD always first, then fav currencies */}
+            {(() => {
+              const cryptoAmount = parseFloat(cryptoRawAmount) || 1;
+              const displayCurrencies = ['USD', ...favCurrencies.filter(c => c !== 'USD')];
+              return displayCurrencies.map((code, i, arr) => {
+                const curr = CURRENCY_MAP[code];
+                const unitPrice = cryptoRates?.[code.toLowerCase()];
+                const total = unitPrice != null ? cryptoAmount * unitPrice : null;
+                const isLast = i === arr.length - 1;
+                return (
+                  <div
+                    key={code}
+                    className={`flex items-center gap-3 px-3 py-2.5
+                      ${!isLast ? (dm ? 'border-b border-zinc-700/50' : 'border-b border-zinc-100') : ''}`}
+                  >
+                    <span className="text-xl leading-none shrink-0">{curr?.flag}</span>
+                    <span className={`text-sm font-semibold w-10 shrink-0 ${dm ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                      {code}
+                    </span>
+                    <div className="flex-1 min-w-0 text-right">
+                      {cryptoLoading ? (
+                        <div className={`h-4 w-24 rounded animate-pulse ml-auto
+                          ${dm ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+                      ) : (
+                        <span className={`text-sm font-bold tabular-nums
+                          ${dm ? 'text-white' : 'text-zinc-900'}`}>
+                          {total != null ? formatCryptoPrice(total) : '—'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+
+            {/* Empty fav hint */}
+            {favCurrencies.length === 0 && !cryptoError && (
+              <div className={`px-4 py-2.5 border-t text-xs
+                ${dm ? 'border-zinc-700 text-zinc-500' : 'border-zinc-100 text-zinc-400'}`}>
+                ☆ Star currencies in Converter to see more prices here
+              </div>
+            )}
+          </div>
+
+        </div>
+        )} {/* end crypto tab */}
 
       </div>
     </div>
