@@ -502,15 +502,9 @@ export default function CurrencyConverter() {
   const [activeTab, setActiveTab] = useState('converter');
   const [multiBase, setMultiBase] = useLocalStorage('cc-multi-base', 'USD');
   const [multiRawAmount, setMultiRawAmount] = useState('1');
-  const [multiTargets, setMultiTargets] = useLocalStorage('cc-multi-targets',
-    ['EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'RUB', 'KZT', 'AED', 'TRY', 'INR']);
   const [multiRates, setMultiRates] = useState(null);
   const [multiLoading, setMultiLoading] = useState(false);
   const [multiError, setMultiError] = useState(null);
-  const [multiEditMode, setMultiEditMode] = useState(false);
-  const [multiAddSearch, setMultiAddSearch] = useState('');
-  const [showMultiAdd, setShowMultiAdd] = useState(false);
-  const multiAddRef = useRef(null);
 
   const debouncedMultiAmount = useDebounce(multiRawAmount, 300);
   const multiAmount = parseFloat(debouncedMultiAmount) || 0;
@@ -572,7 +566,7 @@ export default function CurrencyConverter() {
 
   // ── Multi-tab fetch ──────────────────────────────────────────────────────────
   const fetchMultiRates = useCallback(async () => {
-    const targets = multiTargets.filter(t => t !== multiBase);
+    const targets = favCurrencies.filter(t => t !== multiBase);
     if (!targets.length) return;
     setMultiLoading(true);
     setMultiError(null);
@@ -584,16 +578,9 @@ export default function CurrencyConverter() {
     } finally {
       setMultiLoading(false);
     }
-  }, [multiBase, multiTargets]);
+  }, [multiBase, favCurrencies]);
 
   useEffect(() => { if (activeTab === 'multi') fetchMultiRates(); }, [fetchMultiRates, activeTab]);
-
-  // Close multi-add dropdown on outside click
-  useEffect(() => {
-    const h = e => { if (multiAddRef.current && !multiAddRef.current.contains(e.target)) setShowMultiAdd(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
 
   // ── Favourites helpers (single currencies) ──────────────────────────────────
   const toggleFavCurrency = code => {
@@ -930,191 +917,117 @@ export default function CurrencyConverter() {
         {activeTab === 'multi' && (
         <div className="px-4 pt-3 pb-4 flex flex-col gap-3">
 
-          {/* ── Base currency + Amount ───────────────────────────────────────── */}
-          <div className="flex gap-2">
-            {/* Base selector */}
-            <div className="relative w-36 shrink-0">
-              <CurrencyDropdown
-                value={multiBase}
-                onChange={v => { setMultiBase(v); setMultiRates(null); }}
-                label="Base"
-                darkMode={dm}
-                align="left"
-              />
+          {favCurrencies.length === 0 ? (
+            /* ── Empty state ─────────────────────────────────────────────────── */
+            <div className={`rounded-2xl px-5 py-8 flex flex-col items-center gap-2 text-center
+              ${dm ? 'bg-zinc-800' : 'bg-zinc-50'}`}>
+              <span className="text-3xl">☆</span>
+              <p className={`text-sm font-medium ${dm ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                No favourites yet
+              </p>
+              <p className={`text-xs ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                Star currencies in the Converter tab — they'll appear here.
+              </p>
             </div>
-            {/* Amount */}
-            <div className="flex-1 flex flex-col gap-1">
-              <label className={`text-xs font-medium uppercase tracking-wider
-                ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>Amount</label>
-              <input
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="any"
-                value={multiRawAmount}
-                onChange={e => setMultiRawAmount(e.target.value)}
-                placeholder="1"
-                className={`w-full px-3 py-2 rounded-xl border text-base font-semibold outline-none
-                  focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
-                  ${dm ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500'
-                       : 'bg-white border-zinc-200 text-zinc-900 placeholder-zinc-400'}`}
-              />
-            </div>
-          </div>
-
-          {/* ── Rates list ───────────────────────────────────────────────────── */}
-          <div className={`rounded-2xl overflow-hidden ${dm ? 'bg-zinc-800' : 'bg-zinc-50'}`}>
-            {/* List header */}
-            <div className={`flex items-center justify-between px-3 py-2 border-b
-              ${dm ? 'border-zinc-700' : 'border-zinc-200'}`}>
-              <span className={`text-xs font-semibold uppercase tracking-wider
-                ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                {multiTargets.filter(t => t !== multiBase).length} currencies
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={fetchMultiRates}
-                  className={`text-xs ${dm ? 'text-zinc-500 hover:text-blue-400' : 'text-zinc-400 hover:text-blue-500'}`}
-                >
-                  ↻ Refresh
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setMultiEditMode(e => !e); setShowMultiAdd(false); }}
-                  className={`text-xs font-medium px-2 py-0.5 rounded-lg transition-colors
-                    ${multiEditMode
-                      ? 'bg-blue-500 text-white'
-                      : (dm ? 'bg-zinc-700 text-zinc-300' : 'bg-zinc-200 text-zinc-600')}`}
-                >
-                  {multiEditMode ? 'Done' : 'Edit'}
-                </button>
+          ) : (
+            <>
+              {/* ── Base currency + Amount ─────────────────────────────────────── */}
+              <div className="flex gap-2">
+                <div className="relative w-36 shrink-0">
+                  <CurrencyDropdown
+                    value={multiBase}
+                    onChange={v => { setMultiBase(v); setMultiRates(null); }}
+                    label="Base"
+                    darkMode={dm}
+                    align="left"
+                  />
+                </div>
+                <div className="flex-1 flex flex-col gap-1">
+                  <label className={`text-xs font-medium uppercase tracking-wider
+                    ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>Amount</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="any"
+                    value={multiRawAmount}
+                    onChange={e => setMultiRawAmount(e.target.value)}
+                    placeholder="1"
+                    className={`w-full px-3 py-2 rounded-xl border text-base font-semibold outline-none
+                      focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
+                      ${dm ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500'
+                           : 'bg-white border-zinc-200 text-zinc-900 placeholder-zinc-400'}`}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Error state */}
-            {multiError && (
-              <div className="flex items-center gap-3 px-4 py-3">
-                <p className="text-red-400 text-sm flex-1">⚠ {multiError}</p>
-                <button type="button" onClick={fetchMultiRates}
-                  className="text-xs px-2 py-1 rounded-lg bg-red-500 text-white">Retry</button>
-              </div>
-            )}
-
-            {/* Rows */}
-            {multiTargets
-              .filter(t => t !== multiBase)
-              .map((code, i, arr) => {
-                const curr = CURRENCY_MAP[code];
-                const rate = multiRates?.[code];
-                const converted = rate != null ? multiAmount * rate : null;
-                const isLast = i === arr.length - 1;
-                return (
-                  <div
-                    key={code}
-                    className={`flex items-center gap-3 px-3 py-2.5
-                      ${!isLast ? (dm ? 'border-b border-zinc-700/50' : 'border-b border-zinc-100') : ''}`}
+              {/* ── Rates list ──────────────────────────────────────────────────── */}
+              <div className={`rounded-2xl overflow-hidden ${dm ? 'bg-zinc-800' : 'bg-zinc-50'}`}>
+                {/* List header */}
+                <div className={`flex items-center justify-between px-3 py-2 border-b
+                  ${dm ? 'border-zinc-700' : 'border-zinc-200'}`}>
+                  <span className={`text-xs font-semibold uppercase tracking-wider
+                    ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                    {favCurrencies.filter(t => t !== multiBase).length} currencies
+                  </span>
+                  <button
+                    type="button"
+                    onClick={fetchMultiRates}
+                    className={`text-xs ${dm ? 'text-zinc-500 hover:text-blue-400' : 'text-zinc-400 hover:text-blue-500'}`}
                   >
-                    {/* Remove button (edit mode) */}
-                    {multiEditMode && (
-                      <button
-                        type="button"
-                        onClick={() => setMultiTargets(prev => prev.filter(c => c !== code))}
-                        className="shrink-0 w-5 h-5 rounded-full bg-red-500 text-white text-xs
-                          flex items-center justify-center leading-none"
-                        aria-label={`Remove ${code}`}
-                      >
-                        ✕
-                      </button>
-                    )}
-                    {/* Flag + code + name */}
-                    <span className="text-xl leading-none shrink-0">{curr?.flag}</span>
-                    <div className="flex-1 min-w-0">
-                      <span className={`text-sm font-semibold ${dm ? 'text-white' : 'text-zinc-800'}`}>
-                        {code}
-                      </span>
-                      <span className={`text-xs ml-1.5 ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                        {curr?.name}
-                      </span>
-                    </div>
-                    {/* Converted amount */}
-                    <div className="shrink-0 text-right">
-                      {multiLoading ? (
-                        <div className={`h-4 w-16 rounded animate-pulse
-                          ${dm ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
-                      ) : (
-                        <span className={`text-sm font-bold tabular-nums
-                          ${dm ? 'text-white' : 'text-zinc-900'}`}>
-                          {converted != null ? formatAmount(converted, code) : '—'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                    ↻ Refresh
+                  </button>
+                </div>
 
-            {/* Add currency row (edit mode) */}
-            {multiEditMode && (
-              <div className={`px-3 py-2.5 border-t relative ${dm ? 'border-zinc-700' : 'border-zinc-200'}`}
-                ref={multiAddRef}>
-                <button
-                  type="button"
-                  onClick={() => { setShowMultiAdd(v => !v); setMultiAddSearch(''); }}
-                  className={`w-full flex items-center gap-2 py-1.5 text-sm font-medium rounded-xl
-                    transition-colors ${dm ? 'text-blue-400 hover:text-blue-300' : 'text-blue-500 hover:text-blue-600'}`}
-                >
-                  <span className="text-lg leading-none">+</span>
-                  <span>Add currency</span>
-                </button>
-
-                {showMultiAdd && (
-                  <div className={`absolute left-3 right-3 bottom-full mb-1 rounded-xl shadow-xl border z-50
-                    overflow-hidden ${dm ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-zinc-200'}`}>
-                    <div className={`px-2 pt-2 pb-1 border-b ${dm ? 'border-zinc-700' : 'border-zinc-100'}`}>
-                      <input
-                        autoFocus
-                        type="text"
-                        placeholder="Search…"
-                        value={multiAddSearch}
-                        onChange={e => setMultiAddSearch(e.target.value)}
-                        className={`w-full px-2 py-1.5 text-sm rounded-lg outline-none
-                          ${dm ? 'bg-zinc-700 text-white placeholder-zinc-400'
-                               : 'bg-zinc-50 text-zinc-900 placeholder-zinc-400'}`}
-                      />
-                    </div>
-                    <ul className="max-h-44 overflow-y-auto">
-                      {CURRENCIES
-                        .filter(c =>
-                          c.code !== multiBase &&
-                          !multiTargets.includes(c.code) &&
-                          (c.code.toLowerCase().includes(multiAddSearch.toLowerCase()) ||
-                           c.name.toLowerCase().includes(multiAddSearch.toLowerCase()))
-                        )
-                        .map(c => (
-                          <li key={c.code}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setMultiTargets(prev => [...prev, c.code]);
-                                setShowMultiAdd(false);
-                              }}
-                              className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors
-                                ${dm ? 'hover:bg-zinc-700 text-zinc-200' : 'hover:bg-zinc-50 text-zinc-800'}`}
-                            >
-                              <span className="text-base leading-none">{c.flag}</span>
-                              <span className="font-medium">{c.code}</span>
-                              <span className={`text-xs truncate ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                                {c.name}
-                              </span>
-                            </button>
-                          </li>
-                        ))}
-                    </ul>
+                {/* Error state */}
+                {multiError && (
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <p className="text-red-400 text-sm flex-1">⚠ {multiError}</p>
+                    <button type="button" onClick={fetchMultiRates}
+                      className="text-xs px-2 py-1 rounded-lg bg-red-500 text-white">Retry</button>
                   </div>
                 )}
+
+                {/* Rows */}
+                {favCurrencies
+                  .filter(t => t !== multiBase)
+                  .map((code, i, arr) => {
+                    const curr = CURRENCY_MAP[code];
+                    const rate = multiRates?.[code];
+                    const converted = rate != null ? multiAmount * rate : null;
+                    const isLast = i === arr.length - 1;
+                    return (
+                      <div
+                        key={code}
+                        className={`flex items-center gap-3 px-3 py-2.5
+                          ${!isLast ? (dm ? 'border-b border-zinc-700/50' : 'border-b border-zinc-100') : ''}`}
+                      >
+                        <span className="text-xl leading-none shrink-0">{curr?.flag}</span>
+                        <div className="flex-1 min-w-0">
+                          <span className={`text-sm font-semibold ${dm ? 'text-white' : 'text-zinc-800'}`}>
+                            {code}
+                          </span>
+                          <span className={`text-xs ml-1.5 ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                            {curr?.name}
+                          </span>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          {multiLoading ? (
+                            <div className={`h-4 w-16 rounded animate-pulse
+                              ${dm ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+                          ) : (
+                            <span className={`text-sm font-bold tabular-nums
+                              ${dm ? 'text-white' : 'text-zinc-900'}`}>
+                              {converted != null ? formatAmount(converted, code) : '—'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
-            )}
-          </div>
+            </>
+          )}
 
         </div>
         )} {/* end multi tab */}
