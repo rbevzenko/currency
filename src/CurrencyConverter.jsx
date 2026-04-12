@@ -455,40 +455,45 @@ function CurrencyDropdown({ value, onChange, label, darkMode, isFav, onToggleFav
   const selected = CURRENCY_MAP[value];
 
   return (
-    <div className="flex flex-col gap-1 flex-1 min-w-0" ref={ref}>
-      <span className={`text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>
+    <div className="flex flex-col gap-1.5 flex-1 min-w-0" ref={ref}>
+      <span className={`text-[10px] font-semibold uppercase tracking-widest
+        ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
         {label}
       </span>
       {/* Trigger row: dropdown button + star */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <button
           type="button"
           onClick={() => { setOpen(o => !o); setSearch(''); }}
-          className={`flex-1 min-w-0 flex items-center gap-1.5 px-2.5 py-2 rounded-xl border text-left transition-colors
+          className={`flex-1 min-w-0 flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-left
+            transition-all duration-150
             ${darkMode
-              ? 'bg-zinc-800 border-zinc-700 hover:border-zinc-500 text-white'
-              : 'bg-white border-zinc-200 hover:border-zinc-400 text-zinc-900'
+              ? 'bg-slate-800 border-slate-700 hover:border-blue-500 text-white'
+              : 'bg-white border-slate-200 hover:border-blue-400 text-slate-900 shadow-sm'
             }`}
         >
-          <span className="text-lg leading-none shrink-0">{selected?.flag}</span>
+          <span className="text-2xl leading-none shrink-0">{selected?.flag}</span>
           <div className="flex flex-col min-w-0 flex-1">
-            <span className="font-semibold text-sm">{selected?.code}</span>
-            <span className={`text-xs truncate ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>{selected?.name}</span>
+            <span className={`font-bold text-sm tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+              {selected?.code}
+            </span>
+            <span className={`text-xs truncate ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+              {selected?.name}
+            </span>
           </div>
-          <svg className="w-3.5 h-3.5 shrink-0 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <svg className="w-3.5 h-3.5 shrink-0 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
-        {/* Star: save/remove this currency */}
         {onToggleFav && (
           <button
             type="button"
             onClick={onToggleFav}
-            className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-base
+            className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-base
               transition-colors
               ${isFav
-                ? 'text-yellow-400'
-                : (darkMode ? 'text-zinc-600 hover:text-yellow-400' : 'text-zinc-300 hover:text-yellow-400')
+                ? 'text-amber-400'
+                : (darkMode ? 'text-slate-600 hover:text-amber-400' : 'text-slate-300 hover:text-amber-400')
               }`}
             aria-label={isFav ? `Remove ${value} from favourites` : `Save ${value}`}
           >
@@ -497,26 +502,31 @@ function CurrencyDropdown({ value, onChange, label, darkMode, isFav, onToggleFav
         )}
       </div>
 
-      {/* Dropdown panel — snaps to left or right edge, never overflows */}
+      {/* Dropdown panel */}
       {open && (
         <div
-          className={`absolute z-50 mt-1 rounded-xl shadow-xl border overflow-hidden
-            ${darkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-zinc-200'}`}
+          className={`absolute z-50 mt-1 rounded-xl border overflow-hidden animate-slideDown
+            ${darkMode
+              ? 'bg-slate-800 border-slate-700 shadow-2xl shadow-black/40'
+              : 'bg-white border-slate-200 shadow-2xl shadow-slate-200/80'
+            }`}
           style={{
             top: '100%',
             [align === 'right' ? 'right' : 'left']: 0,
             width: 'min(16rem, calc(100vw - 1rem))',
           }}
         >
-          <div className={`px-2 pt-2 pb-1 border-b ${darkMode ? 'border-zinc-700' : 'border-zinc-100'}`}>
+          <div className={`px-2.5 pt-2.5 pb-1.5 border-b ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>
             <input
               autoFocus
               type="text"
               placeholder="Search currency…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm rounded-lg outline-none
-                ${darkMode ? 'bg-zinc-700 text-white placeholder-zinc-400' : 'bg-zinc-50 text-zinc-900 placeholder-zinc-400'}`}
+              className={`w-full px-2.5 py-1.5 text-sm rounded-lg outline-none
+                ${darkMode
+                  ? 'bg-slate-700 text-white placeholder-slate-500 focus:bg-slate-600'
+                  : 'bg-slate-50 text-slate-900 placeholder-slate-400 focus:bg-white'}`}
             />
           </div>
           <ul className="max-h-52 overflow-y-auto">
@@ -527,20 +537,21 @@ function CurrencyDropdown({ value, onChange, label, darkMode, isFav, onToggleFav
                   onClick={() => { onChange(c.code); setOpen(false); }}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors
                     ${c.code === value
-                      ? (darkMode ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700')
-                      : (darkMode ? 'hover:bg-zinc-700 text-zinc-200' : 'hover:bg-zinc-50 text-zinc-800')
+                      ? (darkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white')
+                      : (darkMode ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-slate-50 text-slate-700')
                     }`}
                 >
                   <span className="text-base leading-none shrink-0">{c.flag}</span>
-                  <span className="font-medium shrink-0">{c.code}</span>
-                  <span className={`text-xs truncate ${c.code === value ? 'opacity-75' : (darkMode ? 'text-zinc-400' : 'text-zinc-500')}`}>
+                  <span className="font-semibold shrink-0">{c.code}</span>
+                  <span className={`text-xs truncate
+                    ${c.code === value ? 'opacity-70' : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}>
                     {c.name}
                   </span>
                 </button>
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className={`px-3 py-4 text-center text-sm ${darkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>
+              <li className={`px-3 py-5 text-center text-sm ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                 No currencies found
               </li>
             )}
@@ -553,7 +564,7 @@ function CurrencyDropdown({ value, onChange, label, darkMode, isFav, onToggleFav
 
 function ChartSkeleton({ darkMode }) {
   return (
-    <div className={`h-20 rounded-xl animate-pulse ${darkMode ? 'bg-zinc-800' : 'bg-zinc-100'}`} />
+    <div className={`h-20 rounded-xl animate-pulse ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`} />
   );
 }
 
@@ -561,10 +572,11 @@ function CustomTooltip({ active, payload, darkMode }) {
   if (!active || !payload?.length) return null;
   const { date, rate } = payload[0].payload;
   return (
-    <div className={`px-2.5 py-1.5 rounded-lg text-xs shadow-lg border
-      ${darkMode ? 'bg-zinc-700 border-zinc-600 text-white' : 'bg-white border-zinc-200 text-zinc-800'}`}>
-      <div className="font-medium">{date}</div>
-      <div className="opacity-75">{rate}</div>
+    <div className={`px-3 py-2 rounded-lg text-xs shadow-xl border
+      ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
+      <div className={`text-[10px] font-semibold uppercase tracking-widest mb-0.5
+        ${darkMode ? 'text-slate-400' : 'text-slate-400'}`}>{date}</div>
+      <div className="font-bold text-sm">{rate}</div>
     </div>
   );
 }
@@ -604,21 +616,21 @@ function CryptoDropdown({ value, onChange, darkMode }) {
   return (
     <div className="flex flex-col gap-1 flex-1 min-w-0 relative" ref={ref}>
       <span className={`text-xs font-medium uppercase tracking-wider
-        ${darkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>Coin</span>
+        ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Coin</span>
       <button
         type="button"
         onClick={() => { setOpen(o => !o); setSearch(''); }}
         className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-left transition-colors
           ${darkMode
-            ? 'bg-zinc-800 border-zinc-700 hover:border-zinc-500 text-white'
-            : 'bg-white border-zinc-200 hover:border-zinc-400 text-zinc-900'
+            ? 'bg-slate-800 border-slate-700 hover:border-slate-500 text-white'
+            : 'bg-white border-slate-200 hover:border-slate-400 text-slate-900'
           }`}
       >
         <span className={`shrink-0 text-xs font-bold px-1.5 py-0.5 rounded-md
           ${darkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-50 text-amber-600'}`}>
           {selected?.symbol}
         </span>
-        <span className={`flex-1 text-sm truncate ${darkMode ? 'text-zinc-300' : 'text-zinc-700'}`}>
+        <span className={`flex-1 text-sm truncate ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
           {selected?.name}
         </span>
         <svg className="w-3.5 h-3.5 shrink-0 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -629,10 +641,10 @@ function CryptoDropdown({ value, onChange, darkMode }) {
       {open && (
         <div
           className={`absolute z-50 rounded-xl shadow-xl border overflow-hidden
-            ${darkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-zinc-200'}`}
+            ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
           style={{ top: '100%', left: 0, width: 'min(18rem, calc(100vw - 1rem))' }}
         >
-          <div className={`px-2 pt-2 pb-1 border-b ${darkMode ? 'border-zinc-700' : 'border-zinc-100'}`}>
+          <div className={`px-2 pt-2 pb-1 border-b ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>
             <input
               autoFocus
               type="text"
@@ -640,8 +652,8 @@ function CryptoDropdown({ value, onChange, darkMode }) {
               value={search}
               onChange={e => setSearch(e.target.value)}
               className={`w-full px-2 py-1.5 text-sm rounded-lg outline-none
-                ${darkMode ? 'bg-zinc-700 text-white placeholder-zinc-400'
-                           : 'bg-zinc-50 text-zinc-900 placeholder-zinc-400'}`}
+                ${darkMode ? 'bg-slate-700 text-white placeholder-slate-400'
+                           : 'bg-slate-50 text-slate-900 placeholder-slate-400'}`}
             />
           </div>
           <ul className="max-h-56 overflow-y-auto">
@@ -653,7 +665,7 @@ function CryptoDropdown({ value, onChange, darkMode }) {
                   className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors
                     ${c.id === value
                       ? (darkMode ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700')
-                      : (darkMode ? 'hover:bg-zinc-700 text-zinc-200' : 'hover:bg-zinc-50 text-zinc-800')
+                      : (darkMode ? 'hover:bg-slate-700 text-slate-200' : 'hover:bg-slate-50 text-slate-800')
                     }`}
                 >
                   <span className={`shrink-0 text-xs font-bold w-12 text-center px-1 py-0.5 rounded
@@ -663,14 +675,14 @@ function CryptoDropdown({ value, onChange, darkMode }) {
                     }`}>
                     {c.symbol}
                   </span>
-                  <span className={`truncate text-xs ${c.id === value ? 'opacity-80' : (darkMode ? 'text-zinc-400' : 'text-zinc-500')}`}>
+                  <span className={`truncate text-xs ${c.id === value ? 'opacity-80' : (darkMode ? 'text-slate-400' : 'text-slate-500')}`}>
                     {c.name}
                   </span>
                 </button>
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className={`px-3 py-4 text-center text-sm ${darkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>
+              <li className={`px-3 py-4 text-center text-sm ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                 No coins found
               </li>
             )}
@@ -900,8 +912,8 @@ export default function CurrencyConverter() {
 
   return (
     <div className={`min-h-screen w-full overflow-x-hidden flex items-start sm:items-center
-      justify-center p-2 sm:p-4 transition-colors duration-300
-      ${dm ? 'bg-zinc-950' : 'bg-gradient-to-br from-blue-50 via-white to-indigo-50'}`}>
+      justify-center p-3 sm:p-6 transition-colors duration-300
+      ${dm ? 'bg-slate-950' : 'bg-slate-50'}`}>
       {/* ── Update toast ─────────────────────────────────────────────────────── */}
       {showUpdateToast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3
@@ -928,17 +940,19 @@ export default function CurrencyConverter() {
         </div>
       )}
 
-      <div className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transition-colors duration-300
-        ${dm ? 'bg-zinc-900' : 'bg-white'}`}>
+      <div className={`w-full max-w-md rounded-2xl overflow-hidden transition-colors duration-300
+        ${dm ? 'bg-slate-900 shadow-2xl shadow-black/40' : 'bg-white shadow-xl shadow-slate-200/80 ring-1 ring-slate-100'}`}>
 
         {/* ── Header ──────────────────────────────────────────────────────────── */}
-        <div className={`flex items-center justify-between px-4 py-3 border-b
-          ${dm ? 'border-zinc-800' : 'border-zinc-100'}`}>
-          <div className="flex items-center gap-2">
+        <div className={`flex items-center justify-between px-5 py-4 border-b
+          ${dm ? 'border-slate-800' : 'border-slate-100'}`}>
+          <div className="flex items-center gap-2.5">
             <span className="text-xl">💱</span>
-            <span className={`font-semibold text-sm ${dm ? 'text-white' : 'text-zinc-800'}`}>
-              Currency Converter
-            </span>
+            <div>
+              <span className={`font-bold text-sm tracking-tight ${dm ? 'text-white' : 'text-slate-900'}`}>
+                Lumina Exchange
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {installPrompt && (
@@ -964,7 +978,7 @@ export default function CurrencyConverter() {
               type="button"
               onClick={() => setDarkMode(!dm)}
               className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors
-                ${dm ? 'bg-zinc-800 hover:bg-zinc-700 text-yellow-400' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600'}`}
+                ${dm ? 'bg-slate-800 hover:bg-slate-700 text-yellow-400' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
               aria-label="Toggle dark mode"
             >
               {dm ? '☀' : '🌙'}
@@ -973,7 +987,7 @@ export default function CurrencyConverter() {
         </div>
 
         {/* ── Tab bar ─────────────────────────────────────────────────────────── */}
-        <div className={`flex border-b ${dm ? 'border-zinc-800' : 'border-zinc-100'}`}>
+        <div className={`flex border-b ${dm ? 'border-slate-800' : 'border-slate-100'}`}>
           {[
             { id: 'converter', icon: '⇄', label: 'Converter' },
             { id: 'multi',     icon: '⊞', label: 'Multi' },
@@ -983,14 +997,14 @@ export default function CurrencyConverter() {
               key={id}
               type="button"
               onClick={() => setActiveTab(id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium
-                border-b-2 transition-colors
+              className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-semibold
+                border-b-2 transition-all
                 ${activeTab === id
                   ? (dm ? 'border-blue-400 text-blue-400' : 'border-blue-500 text-blue-600')
-                  : (dm ? 'border-transparent text-zinc-500 hover:text-zinc-300' : 'border-transparent text-zinc-400 hover:text-zinc-600')
+                  : (dm ? 'border-transparent text-slate-500 hover:text-slate-300' : 'border-transparent text-slate-400 hover:text-slate-600')
                 }`}
             >
-              <span>{icon}</span>
+              <span className="text-base">{icon}</span>
               <span>{label}</span>
             </button>
           ))}
@@ -1001,11 +1015,11 @@ export default function CurrencyConverter() {
         <div className="px-4 pt-3 pb-4 flex flex-col gap-3">
 
           {/* ── Amount Input ─────────────────────────────────────────────────── */}
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors
-            focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent
-            ${dm ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-zinc-200'}`}>
-            <label className={`text-xs font-medium uppercase tracking-wider shrink-0
-              ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
+          <div className={`px-4 py-3 rounded-lg border transition-all
+            focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10
+            ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
+            <label className={`block text-[10px] font-semibold uppercase tracking-widest mb-1
+              ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
               Amount
             </label>
             <input
@@ -1016,8 +1030,8 @@ export default function CurrencyConverter() {
               value={rawAmount}
               onChange={e => setRawAmount(e.target.value)}
               placeholder="1"
-              className={`flex-1 min-w-0 py-1 bg-transparent text-base font-semibold outline-none
-                ${dm ? 'text-white placeholder-zinc-500' : 'text-zinc-900 placeholder-zinc-400'}`}
+              className={`w-full bg-transparent text-3xl font-bold outline-none tracking-tight
+                ${dm ? 'text-white placeholder-slate-600' : 'text-slate-900 placeholder-slate-300'}`}
             />
           </div>
 
@@ -1035,9 +1049,9 @@ export default function CurrencyConverter() {
             <button
               type="button"
               onClick={handleSwap}
-              style={{ transform: `rotate(${swapRotated ? 180 : 0}deg)`, transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)' }}
-              className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center mb-0.5
-                font-bold text-base shadow-md transition-colors
+              style={{ transform: `rotate(${swapRotated ? 180 : 0}deg)`, transition: 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}
+              className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mb-0.5
+                font-bold text-lg shadow-lg transition-colors
                 ${dm ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
               aria-label="Swap currencies"
             >
@@ -1055,13 +1069,16 @@ export default function CurrencyConverter() {
           </div>
 
           {/* ── Conversion Result ────────────────────────────────────────────── */}
-          <div className={`rounded-2xl px-4 py-3 flex flex-col gap-0.5
-            ${dm ? 'bg-zinc-800' : 'bg-blue-50'}`}>
+          <div className={`rounded-lg px-5 py-4 border
+            ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
+
+            <p className={`text-[10px] font-semibold uppercase tracking-widest mb-2
+              ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Result</p>
 
             {rateLoading ? (
               <div className="flex flex-col gap-2 py-1">
-                <div className={`h-8 w-40 rounded-lg animate-pulse ${dm ? 'bg-zinc-700' : 'bg-blue-100'}`} />
-                <div className={`h-3.5 w-28 rounded animate-pulse ${dm ? 'bg-zinc-700' : 'bg-blue-100'}`} />
+                <div className={`h-10 w-44 rounded-lg animate-pulse ${dm ? 'bg-slate-700' : 'bg-slate-100'}`} />
+                <div className={`h-3.5 w-32 rounded animate-pulse ${dm ? 'bg-slate-700' : 'bg-slate-100'}`} />
               </div>
             ) : rateError ? (
               <div className="flex items-center gap-3">
@@ -1069,22 +1086,22 @@ export default function CurrencyConverter() {
                 <button
                   type="button"
                   onClick={fetchRate}
-                  className="shrink-0 px-3 py-1 text-xs font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
+                  className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
                 >
                   Retry
                 </button>
               </div>
             ) : (
               <>
-                <div className="flex items-baseline gap-1.5 min-w-0 flex-wrap">
-                  <span className={`text-3xl font-bold tracking-tight truncate ${dm ? 'text-white' : 'text-zinc-900'}`}>
+                <div className="flex items-baseline gap-2 min-w-0 flex-wrap">
+                  <span className={`text-5xl font-extrabold tracking-tight ${dm ? 'text-white' : 'text-slate-900'}`}>
                     {formatAmount(converted, toCurrency)}
                   </span>
-                  <span className={`text-base font-semibold shrink-0 ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                  <span className={`text-xl font-semibold shrink-0 ${dm ? 'text-slate-400' : 'text-slate-400'}`}>
                     {CURRENCY_MAP[toCurrency]?.code}
                   </span>
                   {trend && (
-                    <span className={`shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-md
+                    <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full
                       ${trend.up
                         ? (dm ? 'text-emerald-400 bg-emerald-950/60' : 'text-emerald-700 bg-emerald-50')
                         : (dm ? 'text-red-400 bg-red-950/60' : 'text-red-700 bg-red-50')
@@ -1093,7 +1110,7 @@ export default function CurrencyConverter() {
                     </span>
                   )}
                 </div>
-                <p className={`text-xs ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                <p className={`text-xs mt-1.5 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
                   {rate != null
                     ? `1 ${fromCurrency} = ${formatAmount(rate, toCurrency)} ${toCurrency} · updated ${updatedLabel}`
                     : '—'
@@ -1104,52 +1121,55 @@ export default function CurrencyConverter() {
           </div>
 
           {/* ── Mini Chart ───────────────────────────────────────────────────── */}
-          <div className={`rounded-xl overflow-hidden ${dm ? 'bg-zinc-800/60' : 'bg-zinc-50'}`}>
-            <div className="flex items-center justify-between px-3 pt-2.5 pb-1">
-              <span className={`text-xs font-medium uppercase tracking-wider ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                30d · {fromCurrency}/{toCurrency}
+          <div className={`rounded-lg overflow-hidden border
+            ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
+            <div className="flex items-center justify-between px-4 pt-3 pb-1">
+              <span className={`text-[10px] font-semibold uppercase tracking-widest
+                ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
+                30-day trend · {fromCurrency}/{toCurrency}
               </span>
             </div>
 
             {chartLoading ? (
-              <div className={`h-12 mx-3 mb-2.5 rounded-lg animate-pulse ${dm ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+              <div className={`h-14 mx-4 mb-3 rounded-lg animate-pulse ${dm ? 'bg-slate-700' : 'bg-slate-100'}`} />
             ) : chartError ? (
-              <div className={`h-12 mx-3 mb-2.5 rounded-lg flex items-center justify-center gap-2 text-xs
-                ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
+              <div className={`h-14 mx-4 mb-3 rounded-lg flex items-center justify-center gap-2 text-xs
+                ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
                 <span>Chart unavailable</span>
                 <button type="button" onClick={fetchChart} className="underline hover:no-underline">Retry</button>
               </div>
             ) : chartData?.length ? (
-              <div className="h-14 w-full animate-fadeIn">
+              <div className="h-16 w-full animate-fadeIn pb-1">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 2, right: 8, left: 8, bottom: 2 }}>
+                  <LineChart data={chartData} margin={{ top: 4, right: 12, left: 12, bottom: 4 }}>
                     <Line
                       type="monotone"
                       dataKey="rate"
                       stroke="#3b82f6"
-                      strokeWidth={1.5}
+                      strokeWidth={2}
                       dot={false}
-                      activeDot={{ r: 3, fill: '#3b82f6', strokeWidth: 0 }}
+                      activeDot={{ r: 3.5, fill: '#3b82f6', strokeWidth: 0 }}
                     />
                     <Tooltip
                       content={<CustomTooltip darkMode={dm} />}
-                      cursor={{ stroke: dm ? '#52525b' : '#e4e4e7', strokeWidth: 1 }}
+                      cursor={{ stroke: dm ? '#334155' : '#e2e8f0', strokeWidth: 1 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className={`h-10 mx-3 mb-2.5 flex items-center justify-center text-xs
-                ${dm ? 'text-zinc-600' : 'text-zinc-400'}`}>
+              <div className={`h-10 mx-4 mb-3 flex items-center justify-center text-xs
+                ${dm ? 'text-slate-600' : 'text-slate-400'}`}>
                 Same currency — no chart
               </div>
             )}
           </div>
 
           {/* ── Historical Rate ──────────────────────────────────────────────── */}
-          <div className={`rounded-xl px-3 pt-2.5 pb-3 ${dm ? 'bg-zinc-800/60' : 'bg-zinc-50'}`}>
-            <p className={`text-xs font-medium uppercase tracking-wider mb-2
-              ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>Rate on date</p>
+          <div className={`rounded-lg border px-4 pt-3 pb-4
+            ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
+            <p className={`text-[10px] font-semibold uppercase tracking-widest mb-2.5
+              ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Rate on date</p>
             <div className="flex gap-2">
               <input
                 type="date"
@@ -1157,17 +1177,16 @@ export default function CurrencyConverter() {
                 onChange={e => setHistDate(e.target.value)}
                 min="1999-01-04"
                 max={new Date(Date.now() - 86400000).toISOString().slice(0, 10)}
-                className={`flex-1 min-w-0 px-2.5 py-1.5 rounded-xl border text-sm outline-none
-                  focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
-                  ${dm ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}
+                className={`flex-1 min-w-0 px-3 py-2 rounded-lg border text-sm outline-none
+                  transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10
+                  ${dm ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
               />
               <button
                 type="button"
                 onClick={fetchHistRate}
                 disabled={!histDate || histLoading || fromCurrency === toCurrency}
-                className={`shrink-0 px-3 py-1.5 rounded-xl text-sm font-semibold transition-colors
-                  disabled:opacity-40
-                  ${dm ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+                className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-colors
+                  bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {histLoading ? '…' : 'Go'}
               </button>
@@ -1178,33 +1197,35 @@ export default function CurrencyConverter() {
             )}
 
             {histRate != null && !histLoading && (
-              <div className={`mt-2.5 pt-2.5 border-t ${dm ? 'border-zinc-700' : 'border-zinc-200'}`}>
-                <p className={`text-xs mb-1 ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
+              <div className={`mt-3 pt-3 border-t ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
+                <p className={`text-xs mb-1.5 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
                   {histActualDate}
                   {histActualDate !== histDate && (
                     <span className="ml-1 opacity-60">(nearest trading day)</span>
                   )}
                 </p>
-                <div className="flex items-baseline gap-1.5 flex-wrap">
-                  <span className={`text-xl font-bold ${dm ? 'text-white' : 'text-zinc-900'}`}>
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className={`text-2xl font-extrabold tracking-tight ${dm ? 'text-white' : 'text-slate-900'}`}>
                     {formatAmount(amount * histRate, toCurrency)}
                   </span>
-                  <span className={`text-sm font-medium ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                  <span className={`text-sm font-semibold ${dm ? 'text-slate-400' : 'text-slate-400'}`}>
                     {toCurrency}
                   </span>
-                  <span className={`text-xs ${dm ? 'text-zinc-600' : 'text-zinc-400'}`}>
-                    · 1 {fromCurrency} = {formatAmount(histRate, toCurrency)} {toCurrency}
-                  </span>
                 </div>
-                {rate != null && (
-                  <p className={`text-xs mt-0.5 ${dm ? 'text-zinc-600' : 'text-zinc-400'}`}>
-                    {(() => {
-                      const diff = ((rate - histRate) / histRate) * 100;
-                      const sign = diff >= 0 ? '+' : '';
-                      return `vs today: ${sign}${diff.toFixed(2)}%`;
-                    })()}
-                  </p>
-                )}
+                <p className={`text-xs mt-0.5 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
+                  1 {fromCurrency} = {formatAmount(histRate, toCurrency)} {toCurrency}
+                  {rate != null && (() => {
+                    const diff = ((rate - histRate) / histRate) * 100;
+                    const sign = diff >= 0 ? '+' : '';
+                    return (
+                      <span className={`ml-2 font-medium ${diff >= 0
+                        ? (dm ? 'text-emerald-400' : 'text-emerald-600')
+                        : (dm ? 'text-red-400' : 'text-red-600')}`}>
+                        {sign}{diff.toFixed(2)}% vs today
+                      </span>
+                    );
+                  })()}
+                </p>
               </div>
             )}
           </div>
@@ -1212,11 +1233,11 @@ export default function CurrencyConverter() {
           {/* ── Quick-select currencies ───────────────────────────────────────── */}
           {favCurrencies.length > 0 && (
             <div>
-              <p className={`text-xs font-medium uppercase tracking-wider mb-2
-                ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                Quick select · tap to set FROM
+              <p className={`text-[10px] font-semibold uppercase tracking-widest mb-2
+                ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
+                Quick select
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {favCurrencies.map(code => {
                   const curr = CURRENCY_MAP[code];
                   const isFrom = code === fromCurrency;
@@ -1227,12 +1248,12 @@ export default function CurrencyConverter() {
                       type="button"
                       onClick={() => setFromCurrency(code)}
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5
-                        rounded-xl text-sm font-medium border transition-colors
+                        rounded-lg text-sm font-semibold border transition-all
                         ${isFrom
-                          ? 'bg-blue-500 border-blue-500 text-white'
+                          ? 'bg-blue-500 border-blue-500 text-white shadow-md shadow-blue-500/20'
                           : isTo
-                            ? (dm ? 'bg-zinc-700 border-zinc-600 text-zinc-200' : 'bg-zinc-100 border-zinc-300 text-zinc-600')
-                            : (dm ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-blue-500' : 'bg-white border-zinc-200 text-zinc-700 hover:border-blue-400')
+                            ? (dm ? 'bg-slate-700 border-slate-600 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-600')
+                            : (dm ? 'bg-slate-800 border-slate-700 text-slate-300 hover:border-blue-500' : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400 shadow-sm')
                         }`}
                     >
                       <span className="text-base leading-none">{curr?.flag}</span>
@@ -1253,14 +1274,14 @@ export default function CurrencyConverter() {
 
           {favCurrencies.length === 0 ? (
             /* ── Empty state ─────────────────────────────────────────────────── */
-            <div className={`rounded-2xl px-5 py-8 flex flex-col items-center gap-2 text-center
-              ${dm ? 'bg-zinc-800' : 'bg-zinc-50'}`}>
+            <div className={`rounded-lg px-5 py-8 flex flex-col items-center gap-2 text-center border
+              ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
               <span className="text-3xl">☆</span>
-              <p className={`text-sm font-medium ${dm ? 'text-zinc-300' : 'text-zinc-700'}`}>
+              <p className={`text-sm font-semibold ${dm ? 'text-slate-300' : 'text-slate-700'}`}>
                 No favourites yet
               </p>
-              <p className={`text-xs ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                Star currencies in the Converter tab — they'll appear here.
+              <p className={`text-xs ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
+                Star currencies in Converter — they'll appear here.
               </p>
             </div>
           ) : (
@@ -1276,9 +1297,9 @@ export default function CurrencyConverter() {
                     align="left"
                   />
                 </div>
-                <div className="flex-1 flex flex-col gap-1">
-                  <label className={`text-xs font-medium uppercase tracking-wider
-                    ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>Amount</label>
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <label className={`text-[10px] font-semibold uppercase tracking-widest
+                    ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Amount</label>
                   <input
                     type="number"
                     inputMode="decimal"
@@ -1287,27 +1308,29 @@ export default function CurrencyConverter() {
                     value={multiRawAmount}
                     onChange={e => setMultiRawAmount(e.target.value)}
                     placeholder="1"
-                    className={`w-full px-3 py-2 rounded-xl border text-base font-semibold outline-none
-                      focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
-                      ${dm ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500'
-                           : 'bg-white border-zinc-200 text-zinc-900 placeholder-zinc-400'}`}
+                    className={`w-full px-3 py-2.5 rounded-lg border text-xl font-bold outline-none
+                      transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10
+                      ${dm ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-600'
+                           : 'bg-white border-slate-200 text-slate-900 placeholder-slate-300 shadow-sm'}`}
                   />
                 </div>
               </div>
 
               {/* ── Rates list ──────────────────────────────────────────────────── */}
-              <div className={`rounded-2xl overflow-hidden ${dm ? 'bg-zinc-800' : 'bg-zinc-50'}`}>
+              <div className={`rounded-lg overflow-hidden border
+                ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
                 {/* List header */}
-                <div className={`flex items-center justify-between px-3 py-2 border-b
-                  ${dm ? 'border-zinc-700' : 'border-zinc-200'}`}>
-                  <span className={`text-xs font-semibold uppercase tracking-wider
-                    ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                <div className={`flex items-center justify-between px-4 py-2.5 border-b
+                  ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
+                  <span className={`text-[10px] font-semibold uppercase tracking-widest
+                    ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
                     {favCurrencies.filter(t => t !== multiBase).length} currencies
                   </span>
                   <button
                     type="button"
                     onClick={fetchMultiRates}
-                    className={`text-xs ${dm ? 'text-zinc-500 hover:text-blue-400' : 'text-zinc-400 hover:text-blue-500'}`}
+                    className={`text-xs font-medium transition-colors
+                      ${dm ? 'text-slate-500 hover:text-blue-400' : 'text-slate-400 hover:text-blue-500'}`}
                   >
                     ↻ Refresh
                   </button>
@@ -1334,24 +1357,24 @@ export default function CurrencyConverter() {
                       <div
                         key={code}
                         className={`flex items-center gap-3 px-3 py-2.5
-                          ${!isLast ? (dm ? 'border-b border-zinc-700/50' : 'border-b border-zinc-100') : ''}`}
+                          ${!isLast ? (dm ? 'border-b border-slate-700/50' : 'border-b border-slate-100') : ''}`}
                       >
                         <span className="text-xl leading-none shrink-0">{curr?.flag}</span>
                         <div className="flex-1 min-w-0">
-                          <span className={`text-sm font-semibold ${dm ? 'text-white' : 'text-zinc-800'}`}>
+                          <span className={`text-sm font-semibold ${dm ? 'text-white' : 'text-slate-800'}`}>
                             {code}
                           </span>
-                          <span className={`text-xs ml-1.5 ${dm ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                          <span className={`text-xs ml-1.5 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
                             {curr?.name}
                           </span>
                         </div>
                         <div className="shrink-0 text-right">
                           {multiLoading ? (
                             <div className={`h-4 w-16 rounded animate-pulse
-                              ${dm ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+                              ${dm ? 'bg-slate-700' : 'bg-slate-200'}`} />
                           ) : (
                             <span className={`text-sm font-bold tabular-nums
-                              ${dm ? 'text-white' : 'text-zinc-900'}`}>
+                              ${dm ? 'text-white' : 'text-slate-900'}`}>
                               {converted != null ? formatAmount(converted, code) : '—'}
                             </span>
                           )}
@@ -1379,9 +1402,9 @@ export default function CurrencyConverter() {
                 darkMode={dm}
               />
             </div>
-            <div className="w-28 shrink-0 flex flex-col gap-1">
-              <label className={`text-xs font-medium uppercase tracking-wider
-                ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>Amount</label>
+            <div className="w-28 shrink-0 flex flex-col gap-1.5">
+              <label className={`text-[10px] font-semibold uppercase tracking-widest
+                ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Amount</label>
               <input
                 type="number"
                 inputMode="decimal"
@@ -1390,27 +1413,29 @@ export default function CurrencyConverter() {
                 value={cryptoRawAmount}
                 onChange={e => setCryptoRawAmount(e.target.value)}
                 placeholder="1"
-                className={`w-full px-3 py-2 rounded-xl border text-base font-semibold outline-none
-                  focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors
-                  ${dm ? 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-500'
-                       : 'bg-white border-zinc-200 text-zinc-900 placeholder-zinc-400'}`}
+                className={`w-full px-3 py-2.5 rounded-lg border text-xl font-bold outline-none
+                  transition-all focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10
+                  ${dm ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-600'
+                       : 'bg-white border-slate-200 text-slate-900 placeholder-slate-300 shadow-sm'}`}
               />
             </div>
           </div>
 
           {/* ── Prices list ──────────────────────────────────────────────────── */}
-          <div className={`rounded-2xl overflow-hidden ${dm ? 'bg-zinc-800' : 'bg-zinc-50'}`}>
+          <div className={`rounded-lg overflow-hidden border
+            ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
             {/* Header */}
-            <div className={`flex items-center justify-between px-3 py-2 border-b
-              ${dm ? 'border-zinc-700' : 'border-zinc-200'}`}>
-              <span className={`text-xs font-semibold uppercase tracking-wider
-                ${dm ? 'text-zinc-400' : 'text-zinc-500'}`}>
+            <div className={`flex items-center justify-between px-4 py-2.5 border-b
+              ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
+              <span className={`text-[10px] font-semibold uppercase tracking-widest
+                ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
                 {CRYPTO_MAP[cryptoCoin]?.symbol} price
               </span>
               <button
                 type="button"
                 onClick={fetchCryptoRates}
-                className={`text-xs ${dm ? 'text-zinc-500 hover:text-amber-400' : 'text-zinc-400 hover:text-amber-500'}`}
+                className={`text-xs font-medium transition-colors
+                  ${dm ? 'text-slate-500 hover:text-amber-400' : 'text-slate-400 hover:text-amber-500'}`}
               >
                 ↻ Refresh
               </button>
@@ -1438,19 +1463,19 @@ export default function CurrencyConverter() {
                   <div
                     key={code}
                     className={`flex items-center gap-3 px-3 py-2.5
-                      ${!isLast ? (dm ? 'border-b border-zinc-700/50' : 'border-b border-zinc-100') : ''}`}
+                      ${!isLast ? (dm ? 'border-b border-slate-700/50' : 'border-b border-slate-100') : ''}`}
                   >
                     <span className="text-xl leading-none shrink-0">{curr?.flag}</span>
-                    <span className={`text-sm font-semibold w-10 shrink-0 ${dm ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                    <span className={`text-sm font-semibold w-10 shrink-0 ${dm ? 'text-slate-300' : 'text-slate-700'}`}>
                       {code}
                     </span>
                     <div className="flex-1 min-w-0 text-right">
                       {cryptoLoading ? (
                         <div className={`h-4 w-24 rounded animate-pulse ml-auto
-                          ${dm ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+                          ${dm ? 'bg-slate-700' : 'bg-slate-200'}`} />
                       ) : (
                         <span className={`text-sm font-bold tabular-nums
-                          ${dm ? 'text-white' : 'text-zinc-900'}`}>
+                          ${dm ? 'text-white' : 'text-slate-900'}`}>
                           {total != null ? formatCryptoPrice(total) : '—'}
                         </span>
                       )}
@@ -1463,7 +1488,7 @@ export default function CurrencyConverter() {
             {/* Empty fav hint */}
             {favCurrencies.length === 0 && !cryptoError && (
               <div className={`px-4 py-2.5 border-t text-xs
-                ${dm ? 'border-zinc-700 text-zinc-500' : 'border-zinc-100 text-zinc-400'}`}>
+                ${dm ? 'border-slate-700 text-slate-500' : 'border-slate-100 text-slate-400'}`}>
                 ☆ Star currencies in Converter to see more prices here
               </div>
             )}
