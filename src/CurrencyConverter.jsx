@@ -433,7 +433,7 @@ function useLocalStorage(key, initial) {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 // align='left'|'right' controls which edge the dropdown panel snaps to
-function CurrencyDropdown({ value, onChange, label, darkMode, isFav, onToggleFav, align = 'left' }) {
+function CurrencyDropdown({ value, onChange, label, darkMode, isFav, onToggleFav, align = 'left', isActive = false, onActivate }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const ref = useRef(null);
@@ -443,6 +443,11 @@ function CurrencyDropdown({ value, onChange, label, darkMode, isFav, onToggleFav
       c.code.toLowerCase().includes(search.toLowerCase()) ||
       c.name.toLowerCase().includes(search.toLowerCase())
     ), [search]);
+
+  // Close dropdown when this field loses active status
+  useEffect(() => {
+    if (!isActive) setOpen(false);
+  }, [isActive]);
 
   useEffect(() => {
     const handler = e => {
@@ -464,12 +469,22 @@ function CurrencyDropdown({ value, onChange, label, darkMode, isFav, onToggleFav
       <div className="flex items-center gap-1.5">
         <button
           type="button"
-          onClick={() => { setOpen(o => !o); setSearch(''); }}
+          onClick={() => {
+            if (!isActive) {
+              onActivate?.();
+              setSearch('');
+            } else {
+              setOpen(o => !o);
+              setSearch('');
+            }
+          }}
           className={`flex-1 min-w-0 flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-left
             transition-all duration-150
-            ${darkMode
-              ? 'bg-slate-800 border-slate-700 hover:border-blue-500 text-white'
-              : 'bg-white border-slate-200 hover:border-blue-400 text-slate-900 shadow-sm'
+            ${isActive
+              ? 'ring-2 ring-blue-500 border-blue-500 ' + (darkMode ? 'bg-slate-800 text-white' : 'bg-white text-slate-900 shadow-sm')
+              : darkMode
+                ? 'bg-slate-800 border-slate-700 hover:border-blue-500 text-white'
+                : 'bg-white border-slate-200 hover:border-blue-400 text-slate-900 shadow-sm'
             }`}
         >
           <span className="text-2xl leading-none shrink-0">{selected?.flag}</span>
@@ -712,6 +727,7 @@ export default function CurrencyConverter() {
   const [chartLoading, setChartLoading] = useState(false);
   const [chartError, setChartError] = useState(null);
   const [favCurrencies, setFavCurrencies] = useLocalStorage('cc-fav-currencies', []);
+  const [activeField, setActiveField] = useState(null); // 'from' | 'to' | null
 
   // ── Multi-tab state ──────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('converter');
@@ -1039,10 +1055,14 @@ export default function CurrencyConverter() {
           <div className="flex items-end gap-2">
             <div className="relative flex-1 min-w-0">
               <CurrencyDropdown
-                value={fromCurrency} onChange={setFromCurrency} label="From" darkMode={dm}
+                value={fromCurrency}
+                onChange={code => { setFromCurrency(code); setActiveField(null); }}
+                label="From" darkMode={dm}
                 align="left"
                 isFav={favCurrencies.includes(fromCurrency)}
                 onToggleFav={() => toggleFavCurrency(fromCurrency)}
+                isActive={activeField === 'from'}
+                onActivate={() => setActiveField('from')}
               />
             </div>
 
@@ -1060,10 +1080,14 @@ export default function CurrencyConverter() {
 
             <div className="relative flex-1 min-w-0">
               <CurrencyDropdown
-                value={toCurrency} onChange={setToCurrency} label="To" darkMode={dm}
+                value={toCurrency}
+                onChange={code => { setToCurrency(code); setActiveField(null); }}
+                label="To" darkMode={dm}
                 align="right"
                 isFav={favCurrencies.includes(toCurrency)}
                 onToggleFav={() => toggleFavCurrency(toCurrency)}
+                isActive={activeField === 'to'}
+                onActivate={() => setActiveField('to')}
               />
             </div>
           </div>
@@ -1233,25 +1257,41 @@ export default function CurrencyConverter() {
           {/* ── Quick-select currencies ───────────────────────────────────────── */}
           {favCurrencies.length > 0 && (
             <div>
-              <p className={`text-[10px] font-semibold uppercase tracking-widest mb-2
-                ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
-                Quick select
-              </p>
+              <div className="flex items-center gap-2 mb-2">
+                <p className={`text-[10px] font-semibold uppercase tracking-widest
+                  ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Quick select
+                </p>
+                {activeField && (
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full
+                    ${dm ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
+                    → {activeField === 'from' ? 'FROM' : 'TO'}
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {favCurrencies.map(code => {
                   const curr = CURRENCY_MAP[code];
                   const isFrom = code === fromCurrency;
                   const isTo   = code === toCurrency;
+                  const isTarget = activeField === 'from' ? isFrom : activeField === 'to' ? isTo : isFrom;
                   return (
                     <button
                       key={code}
                       type="button"
-                      onClick={() => setFromCurrency(code)}
+                      onClick={() => {
+                        if (activeField === 'to') {
+                          setToCurrency(code);
+                        } else {
+                          setFromCurrency(code);
+                        }
+                        setActiveField(null);
+                      }}
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5
                         rounded-lg text-sm font-semibold border transition-all
-                        ${isFrom
+                        ${isTarget
                           ? 'bg-blue-500 border-blue-500 text-white shadow-md shadow-blue-500/20'
-                          : isTo
+                          : (activeField && !isTarget && (activeField === 'from' ? isTo : isFrom))
                             ? (dm ? 'bg-slate-700 border-slate-600 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-600')
                             : (dm ? 'bg-slate-800 border-slate-700 text-slate-300 hover:border-blue-500' : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400 shadow-sm')
                         }`}
