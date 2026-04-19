@@ -803,14 +803,25 @@ export default function CurrencyConverter() {
     return `${Math.round(diff / 60)}m ago`;
   }, [updatedAt, rate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Trend: compare current rate vs 30-day-ago first chart point ─────────────
+  // ── Trend period selector ────────────────────────────────────────────────────
+  const [trendPeriod, setTrendPeriod] = useState('1M');
+
+  // ── Chart display data filtered to selected period ───────────────────────────
+  const chartDisplayData = useMemo(() => {
+    if (!chartData?.length) return chartData;
+    if (trendPeriod === '1M') return chartData;
+    const days = trendPeriod === '1W' ? 7 : 2;
+    return chartData.slice(-days);
+  }, [chartData, trendPeriod]);
+
+  // ── Trend: compare current rate vs period reference point ────────────────────
   const trend = useMemo(() => {
-    if (!chartData?.length || rate == null) return null;
-    const first = chartData[0].rate;
-    if (!first) return null;
-    const pct = ((rate - first) / first) * 100;
+    if (!chartDisplayData?.length || rate == null) return null;
+    const ref = chartDisplayData[0].rate;
+    if (!ref) return null;
+    const pct = ((rate - ref) / ref) * 100;
     return { pct, up: pct >= 0 };
-  }, [chartData, rate]);
+  }, [chartDisplayData, rate]);
 
   // ── Historical rate lookup ───────────────────────────────────────────────────
   const [histDate, setHistDate] = useState('');
@@ -1134,6 +1145,23 @@ export default function CurrencyConverter() {
                       {trend.up ? '↑' : '↓'} {trend.pct > 0 ? '+' : ''}{trend.pct.toFixed(2)}%
                     </span>
                   )}
+                  {chartData?.length > 1 && (
+                    <span className="flex items-center gap-0.5 shrink-0">
+                      {['1D', '1W', '1M'].map(p => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setTrendPeriod(p)}
+                          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded transition-colors
+                            ${trendPeriod === p
+                              ? (dm ? 'bg-blue-500 text-white' : 'bg-blue-500 text-white')
+                              : (dm ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600')
+                            }`}>
+                          {p}
+                        </button>
+                      ))}
+                    </span>
+                  )}
                 </div>
                 <p className={`text-xs mt-1.5 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
                   {rate != null
@@ -1151,7 +1179,7 @@ export default function CurrencyConverter() {
             <div className="flex items-center justify-between px-4 pt-3 pb-1">
               <span className={`text-[10px] font-semibold uppercase tracking-widest
                 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
-                30-day trend · {fromCurrency}/{toCurrency}
+                {trendPeriod === '1M' ? '30-day' : trendPeriod === '1W' ? '7-day' : '1-day'} trend · {fromCurrency}/{toCurrency}
               </span>
             </div>
 
@@ -1163,10 +1191,10 @@ export default function CurrencyConverter() {
                 <span>Chart unavailable</span>
                 <button type="button" onClick={fetchChart} className="underline hover:no-underline">Retry</button>
               </div>
-            ) : chartData?.length ? (
+            ) : chartDisplayData?.length ? (
               <div className="h-16 w-full animate-fadeIn pb-1">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 4, right: 12, left: 12, bottom: 4 }}>
+                  <LineChart data={chartDisplayData} margin={{ top: 4, right: 12, left: 12, bottom: 4 }}>
                     <Line
                       type="monotone"
                       dataKey="rate"
