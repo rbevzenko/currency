@@ -736,6 +736,7 @@ export default function CurrencyConverter() {
   const [multiRates, setMultiRates] = useState(null);
   const [multiLoading, setMultiLoading] = useState(false);
   const [multiError, setMultiError] = useState(null);
+  const [multiBaseActive, setMultiBaseActive] = useState(false);
 
   // ── Crypto-tab state ─────────────────────────────────────────────────────────
   const [cryptoCoin, setCryptoCoin] = useLocalStorage('cc-crypto-coin', 'bitcoin');
@@ -1331,10 +1332,12 @@ export default function CurrencyConverter() {
                 <div className="relative w-36 shrink-0">
                   <CurrencyDropdown
                     value={multiBase}
-                    onChange={v => { setMultiBase(v); setMultiRates(null); }}
+                    onChange={v => { setMultiBase(v); setMultiRates(null); setMultiBaseActive(false); }}
                     label="Base"
                     darkMode={dm}
                     align="left"
+                    isActive={multiBaseActive}
+                    onActivate={() => setMultiBaseActive(true)}
                   />
                 </div>
                 <div className="flex-1 flex flex-col gap-1.5">
@@ -1357,15 +1360,26 @@ export default function CurrencyConverter() {
               </div>
 
               {/* ── Rates list ──────────────────────────────────────────────────── */}
-              <div className={`rounded-lg overflow-hidden border
-                ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
+              <div className={`rounded-lg overflow-hidden border transition-all
+                ${multiBaseActive
+                  ? (dm ? 'bg-slate-800 border-blue-500 ring-2 ring-blue-500/20' : 'bg-white border-blue-400 ring-2 ring-blue-400/20 shadow-sm')
+                  : (dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm')
+                }`}>
                 {/* List header */}
                 <div className={`flex items-center justify-between px-4 py-2.5 border-b
                   ${dm ? 'border-slate-700' : 'border-slate-100'}`}>
-                  <span className={`text-[10px] font-semibold uppercase tracking-widest
-                    ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
-                    {favCurrencies.filter(t => t !== multiBase).length} currencies
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-semibold uppercase tracking-widest
+                      ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
+                      {favCurrencies.filter(t => t !== multiBase).length} currencies
+                    </span>
+                    {multiBaseActive && (
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full
+                        ${dm ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
+                        tap to set Base
+                      </span>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={fetchMultiRates}
@@ -1393,11 +1407,22 @@ export default function CurrencyConverter() {
                     const rate = multiRates?.[code];
                     const converted = rate != null ? multiAmount * rate : null;
                     const isLast = i === arr.length - 1;
+                    const El = multiBaseActive ? 'button' : 'div';
                     return (
-                      <div
+                      <El
                         key={code}
-                        className={`flex items-center gap-3 px-3 py-2.5
-                          ${!isLast ? (dm ? 'border-b border-slate-700/50' : 'border-b border-slate-100') : ''}`}
+                        type={multiBaseActive ? 'button' : undefined}
+                        onClick={multiBaseActive ? () => {
+                          setMultiBase(code);
+                          setMultiRates(null);
+                          setMultiBaseActive(false);
+                        } : undefined}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors
+                          ${!isLast ? (dm ? 'border-b border-slate-700/50' : 'border-b border-slate-100') : ''}
+                          ${multiBaseActive
+                            ? (dm ? 'hover:bg-blue-500/10 active:bg-blue-500/20 cursor-pointer' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer')
+                            : ''
+                          }`}
                       >
                         <span className="text-xl leading-none shrink-0">{curr?.flag}</span>
                         <div className="flex-1 min-w-0">
@@ -1409,7 +1434,11 @@ export default function CurrencyConverter() {
                           </span>
                         </div>
                         <div className="shrink-0 text-right">
-                          {multiLoading ? (
+                          {multiBaseActive ? (
+                            <span className={`text-xs font-semibold ${dm ? 'text-blue-400' : 'text-blue-500'}`}>
+                              Set Base
+                            </span>
+                          ) : multiLoading ? (
                             <div className={`h-4 w-16 rounded animate-pulse
                               ${dm ? 'bg-slate-700' : 'bg-slate-200'}`} />
                           ) : (
@@ -1419,7 +1448,7 @@ export default function CurrencyConverter() {
                             </span>
                           )}
                         </div>
-                      </div>
+                      </El>
                     );
                   })}
               </div>
