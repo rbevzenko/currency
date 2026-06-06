@@ -258,81 +258,82 @@ const CENTRAL_BANK_RATES = [
   { flag: '🇭🇺', bank: 'Magyar Nemzeti Bank',        country: 'Hungary',       currency: 'HUF', rate: 6.50,  display: '6.50',      asOf: '2025-01-28', dir: -1 },
 ].sort((a, b) => b.rate - a.rate);
 
-// Map each currency to the ISO-2 country code used in BIS / World Bank APIs
+// Map each currency to the ISO-2 country code (used as lookup key in live data)
 const CB_ISO_MAP = {
   USD: 'US', EUR: 'XM', GBP: 'GB', JPY: 'JP', CAD: 'CA', AUD: 'AU',
   NZD: 'NZ', CHF: 'CH', CNY: 'CN', SEK: 'SE', NOK: 'NO', DKK: 'DK',
   RUB: 'RU', INR: 'IN', BRL: 'BR', KRW: 'KR', MXN: 'MX', TRY: 'TR',
   ZAR: 'ZA', SGD: 'SG', HKD: 'HK', PLN: 'PL', CZK: 'CZ', HUF: 'HU',
 };
-const ISO_TO_CCY = Object.fromEntries(Object.entries(CB_ISO_MAP).map(([k, v]) => [v, k]));
 
-function parseBISSdmx(json) {
+// OECD alpha-3 → ISO-2 used in CB_ISO_MAP
+const OECD_TO_ISO2 = {
+  USA: 'US', EA20: 'XM', EA19: 'XM', GBR: 'GB', JPN: 'JP',
+  CAN: 'CA', AUS: 'AU', NZL: 'NZ', CHE: 'CH', SWE: 'SE',
+  NOR: 'NO', DNK: 'DK', KOR: 'KR', MEX: 'MX', TUR: 'TR',
+  HUN: 'HU', POL: 'PL', CZE: 'CZ',
+};
+
+function parseSdmxJson(json, codeMap) {
   try {
     const ds = json.data.dataSets[0];
     const seriesDims = json.data.structure.dimensions.series;
-    const obsDims   = json.data.structure.dimensions.observation;
-    const refIdx    = seriesDims.findIndex(d => d.id === 'REF_AREA');
-    const refDim    = seriesDims[refIdx];
-    const timeDim   = obsDims.find(d => d.id === 'TIME_PERIOD');
+    const obsDims    = json.data.structure.dimensions.observation;
+    const refIdx     = seriesDims.findIndex(d => d.id === 'REF_AREA');
+    const refDim     = seriesDims[refIdx];
+    const timeDim    = obsDims.find(d => d.id === 'TIME_PERIOD');
     const result = {};
     for (const [key, series] of Object.entries(ds.series)) {
       const indices = key.split(':').map(Number);
-      const iso = refDim.values[indices[refIdx]]?.id;
-      if (!iso) continue;
+      const raw = refDim.values[indices[refIdx]]?.id;
+      if (!raw) continue;
+      const iso = codeMap ? (codeMap[raw] ?? raw) : raw;
       const obsKeys = Object.keys(series.observations).sort((a, b) => Number(b) - Number(a));
       if (!obsKeys.length) continue;
       const val  = series.observations[obsKeys[0]][0];
       const date = timeDim?.values[Number(obsKeys[0])]?.id ?? '';
       if (val != null) result[iso] = { rate: val, date };
     }
-    return result;
-  } catch { return null; }
-}
-
-function parseWBJson(json) {
-  try {
-    const [, data] = json;
-    if (!Array.isArray(data)) return null;
-    const result = {};
-    for (const item of data) {
-      if (item.value != null) result[item.country.id] = { rate: item.value, date: item.date };
-    }
     return Object.keys(result).length ? result : null;
   } catch { return null; }
 }
 
 async function fetchCBLiveRates() {
-  const isos = Object.values(CB_ISO_MAP);
-  // ① BIS Central Bank Policy Rates (daily, official)
+  // ① OECD MEI short-term interest rates — monthly, CORS-friendly, no auth
   try {
-    const key = isos.join('+');
-    const url = `https://stats.bis.org/api/v2/data/WS_CBPOL_D,1.0/D.${key}.CB.A.A?lastNObservations=1&format=jsondata`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const locs = 'AUS+CAN+GBR+JPN+NZL+CHE+USA+SWE+NOR+DNK+KOR+MEX+TUR+HUN+POL+CZE+EA20';
+    const url = `https://sdmx.oecd.org/public/rest/data/OECD,DF_MEI_FIN,+/M.IRSTCI.${locs}.ST?lastNObservations=1&format=jsondata`;
+    const res = await timedFetch(url, 12000);
     if (res.ok) {
-      const parsed = parseBISSdmx(await res.json());
-      if (parsed && Object.keys(parsed).length > 3) return { source: 'BIS', data: parsed };
+      const parsed = parseSdmxJson(await res.json(), OECD_TO_ISO2);
+      if (parsed) return { source: 'OECD', data: parsed };
     }
   } catch { /* fall through */ }
 
-  // ② World Bank FR.INR.DISC – annual central bank discount rate (fallback)
+  // ② World Bank FR.INR.DISC — annual central bank discount rate
   try {
-    // WB uses alpha-2 but doesn't know XM (Euro Area); use DE as proxy
-    const wbIsos = isos.map(c => c === 'XM' ? 'DE' : c).join(';');
-    const url = `https://api.worldbank.org/v2/country/${wbIsos}/indicator/FR.INR.DISC?format=json&mrv=1&per_page=100`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const wbCodes = 'US;DE;GB;JP;CA;AU;NZ;CH;CN;SE;NO;DK;RU;IN;BR;KR;MX;TR;ZA;SG;HK;PL;CZ;HU';
+    const url = `https://api.worldbank.org/v2/country/${wbCodes}/indicator/FR.INR.DISC?format=json&mrv=1&per_page=100`;
+    const res = await timedFetch(url, 12000);
     if (res.ok) {
-      const raw = await res.json();
-      const parsed = parseWBJson(raw);
-      if (parsed) {
-        if (parsed['DE'] && !parsed['XM']) parsed['XM'] = parsed['DE'];
-        if (Object.keys(parsed).length > 3) return { source: 'World Bank', data: parsed };
+      const [, data] = await res.json();
+      if (Array.isArray(data)) {
+        const result = {};
+        for (const item of data) {
+          if (item.value != null) {
+            const iso = item.country.id === 'DE' ? 'XM' : item.country.id;
+            result[iso] = { rate: item.value, date: item.date };
+          }
+        }
+        if (Object.keys(result).length) return { source: 'World Bank', data: result };
       }
     }
   } catch { /* fall through */ }
 
   return null;
 }
+
+
 
 
 
