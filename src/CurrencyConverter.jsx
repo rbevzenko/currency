@@ -258,7 +258,83 @@ const CENTRAL_BANK_RATES = [
   { flag: '🇭🇺', bank: 'Magyar Nemzeti Bank',        country: 'Hungary',       currency: 'HUF', rate: 6.50,  display: '6.50',      asOf: '2025-01-28', dir: -1 },
 ].sort((a, b) => b.rate - a.rate);
 
-// ─── API helpers (Frankfurter → CDN fallback) ────────────────────────────────
+// Map each currency to the ISO-2 country code used in BIS / World Bank APIs
+const CB_ISO_MAP = {
+  USD: 'US', EUR: 'XM', GBP: 'GB', JPY: 'JP', CAD: 'CA', AUD: 'AU',
+  NZD: 'NZ', CHF: 'CH', CNY: 'CN', SEK: 'SE', NOK: 'NO', DKK: 'DK',
+  RUB: 'RU', INR: 'IN', BRL: 'BR', KRW: 'KR', MXN: 'MX', TRY: 'TR',
+  ZAR: 'ZA', SGD: 'SG', HKD: 'HK', PLN: 'PL', CZK: 'CZ', HUF: 'HU',
+};
+const ISO_TO_CCY = Object.fromEntries(Object.entries(CB_ISO_MAP).map(([k, v]) => [v, k]));
+
+function parseBISSdmx(json) {
+  try {
+    const ds = json.data.dataSets[0];
+    const seriesDims = json.data.structure.dimensions.series;
+    const obsDims   = json.data.structure.dimensions.observation;
+    const refIdx    = seriesDims.findIndex(d => d.id === 'REF_AREA');
+    const refDim    = seriesDims[refIdx];
+    const timeDim   = obsDims.find(d => d.id === 'TIME_PERIOD');
+    const result = {};
+    for (const [key, series] of Object.entries(ds.series)) {
+      const indices = key.split(':').map(Number);
+      const iso = refDim.values[indices[refIdx]]?.id;
+      if (!iso) continue;
+      const obsKeys = Object.keys(series.observations).sort((a, b) => Number(b) - Number(a));
+      if (!obsKeys.length) continue;
+      const val  = series.observations[obsKeys[0]][0];
+      const date = timeDim?.values[Number(obsKeys[0])]?.id ?? '';
+      if (val != null) result[iso] = { rate: val, date };
+    }
+    return result;
+  } catch { return null; }
+}
+
+function parseWBJson(json) {
+  try {
+    const [, data] = json;
+    if (!Array.isArray(data)) return null;
+    const result = {};
+    for (const item of data) {
+      if (item.value != null) result[item.country.id] = { rate: item.value, date: item.date };
+    }
+    return Object.keys(result).length ? result : null;
+  } catch { return null; }
+}
+
+async function fetchCBLiveRates() {
+  const isos = Object.values(CB_ISO_MAP);
+  // ① BIS Central Bank Policy Rates (daily, official)
+  try {
+    const key = isos.join('+');
+    const url = `https://stats.bis.org/api/v2/data/WS_CBPOL_D,1.0/D.${key}.CB.A.A?lastNObservations=1&format=jsondata`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (res.ok) {
+      const parsed = parseBISSdmx(await res.json());
+      if (parsed && Object.keys(parsed).length > 3) return { source: 'BIS', data: parsed };
+    }
+  } catch { /* fall through */ }
+
+  // ② World Bank FR.INR.DISC – annual central bank discount rate (fallback)
+  try {
+    // WB uses alpha-2 but doesn't know XM (Euro Area); use DE as proxy
+    const wbIsos = isos.map(c => c === 'XM' ? 'DE' : c).join(';');
+    const url = `https://api.worldbank.org/v2/country/${wbIsos}/indicator/FR.INR.DISC?format=json&mrv=1&per_page=100`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (res.ok) {
+      const raw = await res.json();
+      const parsed = parseWBJson(raw);
+      if (parsed) {
+        if (parsed['DE'] && !parsed['XM']) parsed['XM'] = parsed['DE'];
+        if (Object.keys(parsed).length > 3) return { source: 'World Bank', data: parsed };
+      }
+    }
+  } catch { /* fall through */ }
+
+  return null;
+}
+
+
 
 const FRANKFURTER_HOSTS = [
   'https://api.frankfurter.app',
@@ -773,6 +849,11 @@ export default function CurrencyConverter() {
   const [cryptoLoading, setCryptoLoading] = useState(false);
   const [cryptoError, setCryptoError] = useState(null);
 
+  // ── Rates-tab state ───────────────────────────────────────────────────────────
+  const [liveRates, setLiveRates] = useState(null);   // { source, data: { ISO: { rate, date } } }
+  const [ratesLoading, setRatesLoading] = useState(false);
+  const [ratesError, setRatesError] = useState(null);
+
   const debouncedMultiAmount = useDebounce(multiRawAmount, 300);
   const multiAmount = parseFloat(debouncedMultiAmount) || 0;
 
@@ -910,6 +991,23 @@ export default function CurrencyConverter() {
   }, [cryptoCoin, favCurrencies]);
 
   useEffect(() => { if (activeTab === 'crypto') fetchCryptoRates(); }, [fetchCryptoRates, activeTab]);
+
+  // ── Rates-tab fetch ───────────────────────────────────────────────────────────
+  const fetchLiveRates = useCallback(async () => {
+    setRatesLoading(true);
+    setRatesError(null);
+    try {
+      const result = await fetchCBLiveRates();
+      setLiveRates(result);
+      if (!result) setRatesError('Live data unavailable — showing reference rates');
+    } catch (err) {
+      setRatesError(err.message || 'Failed to fetch');
+    } finally {
+      setRatesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { if (activeTab === 'rates') fetchLiveRates(); }, [fetchLiveRates, activeTab]);
 
   // ── Favourites helpers (single currencies) ──────────────────────────────────
   const toggleFavCurrency = code => {
@@ -1628,66 +1726,120 @@ export default function CurrencyConverter() {
         <div className="px-4 pt-3 pb-4 flex flex-col gap-3">
 
           {/* ── Header card ──────────────────────────────────────────────────── */}
-          <div className={`rounded-lg border px-4 py-3
+          <div className={`rounded-lg border px-4 py-3 flex items-center justify-between gap-3
             ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
-            <p className={`text-[10px] font-semibold uppercase tracking-widest mb-0.5
-              ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Central Bank Key Rates</p>
-            <p className={`text-xs ${dm ? 'text-slate-400' : 'text-slate-500'}`}>
-              Reference data · sorted highest → lowest · verify with your central bank
-            </p>
+            <div className="min-w-0">
+              <p className={`text-[10px] font-semibold uppercase tracking-widest mb-0.5
+                ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Central Bank Key Rates</p>
+              <p className={`text-xs ${dm ? 'text-slate-400' : 'text-slate-500'}`}>
+                {ratesLoading
+                  ? 'Fetching live data…'
+                  : liveRates
+                    ? `Live · Source: ${liveRates.source}`
+                    : 'Reference data · as of date shown'
+                }
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={fetchLiveRates}
+              disabled={ratesLoading}
+              className={`shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors
+                ${ratesLoading
+                  ? (dm ? 'opacity-40 border-slate-600 text-slate-500' : 'opacity-40 border-slate-200 text-slate-400')
+                  : (dm ? 'border-slate-600 text-slate-300 hover:border-blue-500 hover:text-blue-400' : 'border-slate-200 text-slate-500 hover:border-blue-400 hover:text-blue-600')
+                }`}
+            >
+              {ratesLoading ? '…' : '↻ Refresh'}
+            </button>
           </div>
+
+          {/* ── Error banner ─────────────────────────────────────────────────── */}
+          {ratesError && (
+            <p className={`text-[11px] px-3 py-2 rounded-lg border
+              ${dm ? 'text-amber-400 bg-amber-950/40 border-amber-900' : 'text-amber-700 bg-amber-50 border-amber-200'}`}>
+              {ratesError}
+            </p>
+          )}
 
           {/* ── Rates list ───────────────────────────────────────────────────── */}
           <div className={`rounded-lg overflow-hidden border
             ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
-            {CENTRAL_BANK_RATES.map((item, i) => (
-              <div
-                key={item.currency}
-                className={`flex items-center gap-3 px-4 py-3
-                  ${i !== 0 ? (dm ? 'border-t border-slate-700' : 'border-t border-slate-100') : ''}`}
-              >
-                {/* Flag + names */}
-                <span className="text-xl leading-none shrink-0">{item.flag}</span>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold leading-tight truncate
-                    ${dm ? 'text-white' : 'text-slate-800'}`}>
-                    {item.bank}
-                  </p>
-                  <p className={`text-[11px] leading-tight mt-0.5
-                    ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
-                    {item.country} · {item.currency}
-                  </p>
-                </div>
+            {(() => {
+              const liveData = liveRates?.data;
+              const sorted = liveData
+                ? [...CENTRAL_BANK_RATES].sort((a, b) => {
+                    const ra = liveData[CB_ISO_MAP[a.currency]]?.rate ?? a.rate;
+                    const rb = liveData[CB_ISO_MAP[b.currency]]?.rate ?? b.rate;
+                    return rb - ra;
+                  })
+                : CENTRAL_BANK_RATES;
 
-                {/* Rate + direction + date */}
-                <div className="text-right shrink-0">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <span className={`text-base font-bold tabular-nums
-                      ${dm ? 'text-white' : 'text-slate-900'}`}>
-                      {item.display}%
-                    </span>
-                    <span className={`text-xs font-bold
-                      ${item.dir > 0
-                        ? (dm ? 'text-red-400' : 'text-red-500')
-                        : item.dir < 0
-                          ? (dm ? 'text-emerald-400' : 'text-emerald-600')
-                          : (dm ? 'text-slate-500' : 'text-slate-400')
-                      }`}>
-                      {item.dir > 0 ? '↑' : item.dir < 0 ? '↓' : '—'}
-                    </span>
+              return sorted.map((item, i) => {
+                const iso = CB_ISO_MAP[item.currency];
+                const live = liveData?.[iso];
+                const displayRate = live ? live.rate.toFixed(2) : item.display;
+                const displayDate = live ? live.date : item.asOf;
+                const isLive = !!live;
+
+                return (
+                  <div
+                    key={item.currency}
+                    className={`flex items-center gap-3 px-4 py-3
+                      ${i !== 0 ? (dm ? 'border-t border-slate-700' : 'border-t border-slate-100') : ''}`}
+                  >
+                    <span className="text-xl leading-none shrink-0">{item.flag}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold leading-tight truncate
+                        ${dm ? 'text-white' : 'text-slate-800'}`}>
+                        {item.bank}
+                      </p>
+                      <p className={`text-[11px] leading-tight mt-0.5
+                        ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
+                        {item.country} · {item.currency}
+                      </p>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span className={`text-base font-bold tabular-nums
+                          ${dm ? 'text-white' : 'text-slate-900'}`}>
+                          {displayRate}%
+                        </span>
+                        {!isLive && (
+                          <span className={`text-xs font-bold
+                            ${item.dir > 0
+                              ? (dm ? 'text-red-400' : 'text-red-500')
+                              : item.dir < 0
+                                ? (dm ? 'text-emerald-400' : 'text-emerald-600')
+                                : (dm ? 'text-slate-500' : 'text-slate-400')
+                            }`}>
+                            {item.dir > 0 ? '↑' : item.dir < 0 ? '↓' : '—'}
+                          </span>
+                        )}
+                        {isLive && (
+                          <span className={`text-[9px] font-semibold px-1 py-0.5 rounded
+                            ${dm ? 'bg-emerald-900/50 text-emerald-400' : 'bg-emerald-50 text-emerald-700'}`}>
+                            live
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-[10px] tabular-nums mt-0.5
+                        ${dm ? 'text-slate-600' : 'text-slate-400'}`}>
+                        {displayDate}
+                      </p>
+                    </div>
                   </div>
-                  <p className={`text-[10px] tabular-nums mt-0.5
-                    ${dm ? 'text-slate-600' : 'text-slate-400'}`}>
-                    {item.asOf}
-                  </p>
-                </div>
-              </div>
-            ))}
+                );
+              });
+            })()}
           </div>
 
           {/* ── Disclaimer ───────────────────────────────────────────────────── */}
           <p className={`text-[10px] text-center px-2 ${dm ? 'text-slate-600' : 'text-slate-400'}`}>
-            Dates reflect the last rate decision shown. Rates may have changed since.
+            {liveRates
+              ? `Data from ${liveRates.source}. Verify with your central bank.`
+              : 'Reference rates. Verify with official sources.'}
           </p>
 
         </div>
