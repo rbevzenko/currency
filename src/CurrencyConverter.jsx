@@ -230,6 +230,34 @@ const CRYPTOS = [
 
 const CRYPTO_MAP = Object.fromEntries(CRYPTOS.map(c => [c.id, c]));
 
+// ─── Central bank key rates (reference data) ────────────────────────────────
+const CENTRAL_BANK_RATES = [
+  { flag: '🇺🇸', bank: 'Federal Reserve',           country: 'United States', currency: 'USD', rate: 4.33,  display: '4.25–4.50', asOf: '2024-12-18', dir: -1 },
+  { flag: '🇪🇺', bank: 'European Central Bank',      country: 'Euro Area',     currency: 'EUR', rate: 2.50,  display: '2.50',      asOf: '2025-01-30', dir: -1 },
+  { flag: '🇬🇧', bank: 'Bank of England',            country: 'United Kingdom',currency: 'GBP', rate: 4.50,  display: '4.50',      asOf: '2025-02-06', dir: -1 },
+  { flag: '🇯🇵', bank: 'Bank of Japan',              country: 'Japan',         currency: 'JPY', rate: 0.50,  display: '0.50',      asOf: '2025-01-24', dir:  1 },
+  { flag: '🇨🇦', bank: 'Bank of Canada',             country: 'Canada',        currency: 'CAD', rate: 3.00,  display: '3.00',      asOf: '2025-01-29', dir: -1 },
+  { flag: '🇦🇺', bank: 'Reserve Bank of Australia',  country: 'Australia',     currency: 'AUD', rate: 4.10,  display: '4.10',      asOf: '2025-02-18', dir: -1 },
+  { flag: '🇳🇿', bank: 'Reserve Bank of NZ',         country: 'New Zealand',   currency: 'NZD', rate: 3.75,  display: '3.75',      asOf: '2025-02-19', dir: -1 },
+  { flag: '🇨🇭', bank: 'Swiss National Bank',        country: 'Switzerland',   currency: 'CHF', rate: 0.25,  display: '0.25',      asOf: '2025-03-20', dir: -1 },
+  { flag: '🇨🇳', bank: "People's Bank of China",     country: 'China',         currency: 'CNY', rate: 3.10,  display: '3.10',      asOf: '2025-01-20', dir: -1 },
+  { flag: '🇸🇪', bank: 'Riksbank',                   country: 'Sweden',        currency: 'SEK', rate: 2.25,  display: '2.25',      asOf: '2025-01-29', dir: -1 },
+  { flag: '🇳🇴', bank: 'Norges Bank',                country: 'Norway',        currency: 'NOK', rate: 4.50,  display: '4.50',      asOf: '2025-01-23', dir:  0 },
+  { flag: '🇩🇰', bank: 'Danmarks Nationalbank',      country: 'Denmark',       currency: 'DKK', rate: 2.85,  display: '2.85',      asOf: '2025-01-30', dir: -1 },
+  { flag: '🇷🇺', bank: 'Bank of Russia',             country: 'Russia',        currency: 'RUB', rate: 21.00, display: '21.00',     asOf: '2024-10-25', dir:  1 },
+  { flag: '🇮🇳', bank: 'Reserve Bank of India',      country: 'India',         currency: 'INR', rate: 6.25,  display: '6.25',      asOf: '2025-02-07', dir: -1 },
+  { flag: '🇧🇷', bank: 'Banco Central do Brasil',    country: 'Brazil',        currency: 'BRL', rate: 14.75, display: '14.75',     asOf: '2025-02-05', dir:  1 },
+  { flag: '🇰🇷', bank: 'Bank of Korea',              country: 'South Korea',   currency: 'KRW', rate: 2.75,  display: '2.75',      asOf: '2025-01-16', dir: -1 },
+  { flag: '🇲🇽', bank: 'Banco de México',            country: 'Mexico',        currency: 'MXN', rate: 9.50,  display: '9.50',      asOf: '2025-02-06', dir: -1 },
+  { flag: '🇹🇷', bank: 'Central Bank of Turkey',     country: 'Turkey',        currency: 'TRY', rate: 46.00, display: '46.00',     asOf: '2025-02-25', dir: -1 },
+  { flag: '🇿🇦', bank: 'SA Reserve Bank',            country: 'South Africa',  currency: 'ZAR', rate: 7.50,  display: '7.50',      asOf: '2025-01-30', dir: -1 },
+  { flag: '🇸🇬', bank: 'Monetary Authority of SG',   country: 'Singapore',     currency: 'SGD', rate: 3.68,  display: '~3.68',     asOf: '2025-01-01', dir:  0 },
+  { flag: '🇭🇰', bank: 'HKMA',                       country: 'Hong Kong',     currency: 'HKD', rate: 4.75,  display: '4.75',      asOf: '2025-01-01', dir: -1 },
+  { flag: '🇵🇱', bank: 'National Bank of Poland',    country: 'Poland',        currency: 'PLN', rate: 5.75,  display: '5.75',      asOf: '2024-10-08', dir:  0 },
+  { flag: '🇨🇿', bank: 'Czech National Bank',        country: 'Czech Republic',currency: 'CZK', rate: 3.75,  display: '3.75',      asOf: '2025-02-06', dir: -1 },
+  { flag: '🇭🇺', bank: 'Magyar Nemzeti Bank',        country: 'Hungary',       currency: 'HUF', rate: 6.50,  display: '6.50',      asOf: '2025-01-28', dir: -1 },
+].sort((a, b) => b.rate - a.rate);
+
 // ─── API helpers (Frankfurter → CDN fallback) ────────────────────────────────
 
 const FRANKFURTER_HOSTS = [
@@ -1020,6 +1048,7 @@ export default function CurrencyConverter() {
             { id: 'converter', icon: '⇄', label: 'Converter' },
             { id: 'multi',     icon: '⊞', label: 'Multi' },
             { id: 'crypto',    icon: '₿',  label: 'Crypto' },
+            { id: 'rates',     icon: '%',  label: 'Rates' },
           ].map(({ id, icon, label }) => (
             <button
               key={id}
@@ -1593,6 +1622,76 @@ export default function CurrencyConverter() {
 
         </div>
         )} {/* end crypto tab */}
+
+        {/* ════════════ RATES TAB ════════════ */}
+        {activeTab === 'rates' && (
+        <div className="px-4 pt-3 pb-4 flex flex-col gap-3">
+
+          {/* ── Header card ──────────────────────────────────────────────────── */}
+          <div className={`rounded-lg border px-4 py-3
+            ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
+            <p className={`text-[10px] font-semibold uppercase tracking-widest mb-0.5
+              ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Central Bank Key Rates</p>
+            <p className={`text-xs ${dm ? 'text-slate-400' : 'text-slate-500'}`}>
+              Reference data · sorted highest → lowest · verify with your central bank
+            </p>
+          </div>
+
+          {/* ── Rates list ───────────────────────────────────────────────────── */}
+          <div className={`rounded-lg overflow-hidden border
+            ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
+            {CENTRAL_BANK_RATES.map((item, i) => (
+              <div
+                key={item.currency}
+                className={`flex items-center gap-3 px-4 py-3
+                  ${i !== 0 ? (dm ? 'border-t border-slate-700' : 'border-t border-slate-100') : ''}`}
+              >
+                {/* Flag + names */}
+                <span className="text-xl leading-none shrink-0">{item.flag}</span>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold leading-tight truncate
+                    ${dm ? 'text-white' : 'text-slate-800'}`}>
+                    {item.bank}
+                  </p>
+                  <p className={`text-[11px] leading-tight mt-0.5
+                    ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {item.country} · {item.currency}
+                  </p>
+                </div>
+
+                {/* Rate + direction + date */}
+                <div className="text-right shrink-0">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span className={`text-base font-bold tabular-nums
+                      ${dm ? 'text-white' : 'text-slate-900'}`}>
+                      {item.display}%
+                    </span>
+                    <span className={`text-xs font-bold
+                      ${item.dir > 0
+                        ? (dm ? 'text-red-400' : 'text-red-500')
+                        : item.dir < 0
+                          ? (dm ? 'text-emerald-400' : 'text-emerald-600')
+                          : (dm ? 'text-slate-500' : 'text-slate-400')
+                      }`}>
+                      {item.dir > 0 ? '↑' : item.dir < 0 ? '↓' : '—'}
+                    </span>
+                  </div>
+                  <p className={`text-[10px] tabular-nums mt-0.5
+                    ${dm ? 'text-slate-600' : 'text-slate-400'}`}>
+                    {item.asOf}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Disclaimer ───────────────────────────────────────────────────── */}
+          <p className={`text-[10px] text-center px-2 ${dm ? 'text-slate-600' : 'text-slate-400'}`}>
+            Dates reflect the last rate decision shown. Rates may have changed since.
+          </p>
+
+        </div>
+        )} {/* end rates tab */}
 
       </div>
     </div>
