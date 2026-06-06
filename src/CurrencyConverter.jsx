@@ -230,111 +230,6 @@ const CRYPTOS = [
 
 const CRYPTO_MAP = Object.fromEntries(CRYPTOS.map(c => [c.id, c]));
 
-// ─── Central bank key rates (reference data) ────────────────────────────────
-const CENTRAL_BANK_RATES = [
-  { flag: '🇺🇸', bank: 'Federal Reserve',           country: 'United States', currency: 'USD', rate: 4.33,  display: '4.25–4.50', asOf: '2024-12-18', dir: -1 },
-  { flag: '🇪🇺', bank: 'European Central Bank',      country: 'Euro Area',     currency: 'EUR', rate: 2.50,  display: '2.50',      asOf: '2025-01-30', dir: -1 },
-  { flag: '🇬🇧', bank: 'Bank of England',            country: 'United Kingdom',currency: 'GBP', rate: 4.50,  display: '4.50',      asOf: '2025-02-06', dir: -1 },
-  { flag: '🇯🇵', bank: 'Bank of Japan',              country: 'Japan',         currency: 'JPY', rate: 0.50,  display: '0.50',      asOf: '2025-01-24', dir:  1 },
-  { flag: '🇨🇦', bank: 'Bank of Canada',             country: 'Canada',        currency: 'CAD', rate: 3.00,  display: '3.00',      asOf: '2025-01-29', dir: -1 },
-  { flag: '🇦🇺', bank: 'Reserve Bank of Australia',  country: 'Australia',     currency: 'AUD', rate: 4.10,  display: '4.10',      asOf: '2025-02-18', dir: -1 },
-  { flag: '🇳🇿', bank: 'Reserve Bank of NZ',         country: 'New Zealand',   currency: 'NZD', rate: 3.75,  display: '3.75',      asOf: '2025-02-19', dir: -1 },
-  { flag: '🇨🇭', bank: 'Swiss National Bank',        country: 'Switzerland',   currency: 'CHF', rate: 0.25,  display: '0.25',      asOf: '2025-03-20', dir: -1 },
-  { flag: '🇨🇳', bank: "People's Bank of China",     country: 'China',         currency: 'CNY', rate: 3.10,  display: '3.10',      asOf: '2025-01-20', dir: -1 },
-  { flag: '🇸🇪', bank: 'Riksbank',                   country: 'Sweden',        currency: 'SEK', rate: 2.25,  display: '2.25',      asOf: '2025-01-29', dir: -1 },
-  { flag: '🇳🇴', bank: 'Norges Bank',                country: 'Norway',        currency: 'NOK', rate: 4.50,  display: '4.50',      asOf: '2025-01-23', dir:  0 },
-  { flag: '🇩🇰', bank: 'Danmarks Nationalbank',      country: 'Denmark',       currency: 'DKK', rate: 2.85,  display: '2.85',      asOf: '2025-01-30', dir: -1 },
-  { flag: '🇷🇺', bank: 'Bank of Russia',             country: 'Russia',        currency: 'RUB', rate: 21.00, display: '21.00',     asOf: '2024-10-25', dir:  1 },
-  { flag: '🇮🇳', bank: 'Reserve Bank of India',      country: 'India',         currency: 'INR', rate: 6.25,  display: '6.25',      asOf: '2025-02-07', dir: -1 },
-  { flag: '🇧🇷', bank: 'Banco Central do Brasil',    country: 'Brazil',        currency: 'BRL', rate: 14.75, display: '14.75',     asOf: '2025-02-05', dir:  1 },
-  { flag: '🇰🇷', bank: 'Bank of Korea',              country: 'South Korea',   currency: 'KRW', rate: 2.75,  display: '2.75',      asOf: '2025-01-16', dir: -1 },
-  { flag: '🇲🇽', bank: 'Banco de México',            country: 'Mexico',        currency: 'MXN', rate: 9.50,  display: '9.50',      asOf: '2025-02-06', dir: -1 },
-  { flag: '🇹🇷', bank: 'Central Bank of Turkey',     country: 'Turkey',        currency: 'TRY', rate: 46.00, display: '46.00',     asOf: '2025-02-25', dir: -1 },
-  { flag: '🇿🇦', bank: 'SA Reserve Bank',            country: 'South Africa',  currency: 'ZAR', rate: 7.50,  display: '7.50',      asOf: '2025-01-30', dir: -1 },
-  { flag: '🇸🇬', bank: 'Monetary Authority of SG',   country: 'Singapore',     currency: 'SGD', rate: 3.68,  display: '~3.68',     asOf: '2025-01-01', dir:  0 },
-  { flag: '🇭🇰', bank: 'HKMA',                       country: 'Hong Kong',     currency: 'HKD', rate: 4.75,  display: '4.75',      asOf: '2025-01-01', dir: -1 },
-  { flag: '🇵🇱', bank: 'National Bank of Poland',    country: 'Poland',        currency: 'PLN', rate: 5.75,  display: '5.75',      asOf: '2024-10-08', dir:  0 },
-  { flag: '🇨🇿', bank: 'Czech National Bank',        country: 'Czech Republic',currency: 'CZK', rate: 3.75,  display: '3.75',      asOf: '2025-02-06', dir: -1 },
-  { flag: '🇭🇺', bank: 'Magyar Nemzeti Bank',        country: 'Hungary',       currency: 'HUF', rate: 6.50,  display: '6.50',      asOf: '2025-01-28', dir: -1 },
-].sort((a, b) => b.rate - a.rate);
-
-// Map each currency to the ISO-2 country code (used as lookup key in live data)
-const CB_ISO_MAP = {
-  USD: 'US', EUR: 'XM', GBP: 'GB', JPY: 'JP', CAD: 'CA', AUD: 'AU',
-  NZD: 'NZ', CHF: 'CH', CNY: 'CN', SEK: 'SE', NOK: 'NO', DKK: 'DK',
-  RUB: 'RU', INR: 'IN', BRL: 'BR', KRW: 'KR', MXN: 'MX', TRY: 'TR',
-  ZAR: 'ZA', SGD: 'SG', HKD: 'HK', PLN: 'PL', CZK: 'CZ', HUF: 'HU',
-};
-
-// OECD alpha-3 → ISO-2 used in CB_ISO_MAP
-const OECD_TO_ISO2 = {
-  USA: 'US', EA20: 'XM', EA19: 'XM', GBR: 'GB', JPN: 'JP',
-  CAN: 'CA', AUS: 'AU', NZL: 'NZ', CHE: 'CH', SWE: 'SE',
-  NOR: 'NO', DNK: 'DK', KOR: 'KR', MEX: 'MX', TUR: 'TR',
-  HUN: 'HU', POL: 'PL', CZE: 'CZ',
-};
-
-function parseSdmxJson(json, codeMap) {
-  try {
-    const ds = json.data.dataSets[0];
-    const seriesDims = json.data.structure.dimensions.series;
-    const obsDims    = json.data.structure.dimensions.observation;
-    const refIdx     = seriesDims.findIndex(d => d.id === 'REF_AREA');
-    const refDim     = seriesDims[refIdx];
-    const timeDim    = obsDims.find(d => d.id === 'TIME_PERIOD');
-    const result = {};
-    for (const [key, series] of Object.entries(ds.series)) {
-      const indices = key.split(':').map(Number);
-      const raw = refDim.values[indices[refIdx]]?.id;
-      if (!raw) continue;
-      const iso = codeMap ? (codeMap[raw] ?? raw) : raw;
-      const obsKeys = Object.keys(series.observations).sort((a, b) => Number(b) - Number(a));
-      if (!obsKeys.length) continue;
-      const val  = series.observations[obsKeys[0]][0];
-      const date = timeDim?.values[Number(obsKeys[0])]?.id ?? '';
-      if (val != null) result[iso] = { rate: val, date };
-    }
-    return Object.keys(result).length ? result : null;
-  } catch { return null; }
-}
-
-async function fetchCBLiveRates() {
-  // ① OECD MEI short-term interest rates — monthly, CORS-friendly, no auth
-  try {
-    const locs = 'AUS+CAN+GBR+JPN+NZL+CHE+USA+SWE+NOR+DNK+KOR+MEX+TUR+HUN+POL+CZE+EA20';
-    const url = `https://sdmx.oecd.org/public/rest/data/OECD,DF_MEI_FIN,+/M.IRSTCI.${locs}.ST?lastNObservations=1&format=jsondata`;
-    const res = await timedFetch(url, 12000);
-    if (res.ok) {
-      const parsed = parseSdmxJson(await res.json(), OECD_TO_ISO2);
-      if (parsed) return { source: 'OECD', data: parsed };
-    }
-  } catch { /* fall through */ }
-
-  // ② World Bank FR.INR.DISC — annual central bank discount rate
-  try {
-    const wbCodes = 'US;DE;GB;JP;CA;AU;NZ;CH;CN;SE;NO;DK;RU;IN;BR;KR;MX;TR;ZA;SG;HK;PL;CZ;HU';
-    const url = `https://api.worldbank.org/v2/country/${wbCodes}/indicator/FR.INR.DISC?format=json&mrv=1&per_page=100`;
-    const res = await timedFetch(url, 12000);
-    if (res.ok) {
-      const [, data] = await res.json();
-      if (Array.isArray(data)) {
-        const result = {};
-        for (const item of data) {
-          if (item.value != null) {
-            const iso = item.country.id === 'DE' ? 'XM' : item.country.id;
-            result[iso] = { rate: item.value, date: item.date };
-          }
-        }
-        if (Object.keys(result).length) return { source: 'World Bank', data: result };
-      }
-    }
-  } catch { /* fall through */ }
-
-  return null;
-}
-
-
-
 
 
 const FRANKFURTER_HOSTS = [
@@ -850,11 +745,6 @@ export default function CurrencyConverter() {
   const [cryptoLoading, setCryptoLoading] = useState(false);
   const [cryptoError, setCryptoError] = useState(null);
 
-  // ── Rates-tab state ───────────────────────────────────────────────────────────
-  const [liveRates, setLiveRates] = useState(null);   // { source, data: { ISO: { rate, date } } }
-  const [ratesLoading, setRatesLoading] = useState(false);
-  const [ratesError, setRatesError] = useState(null);
-
   const debouncedMultiAmount = useDebounce(multiRawAmount, 300);
   const multiAmount = parseFloat(debouncedMultiAmount) || 0;
 
@@ -993,23 +883,6 @@ export default function CurrencyConverter() {
 
   useEffect(() => { if (activeTab === 'crypto') fetchCryptoRates(); }, [fetchCryptoRates, activeTab]);
 
-  // ── Rates-tab fetch ───────────────────────────────────────────────────────────
-  const fetchLiveRates = useCallback(async () => {
-    setRatesLoading(true);
-    setRatesError(null);
-    try {
-      const result = await fetchCBLiveRates();
-      setLiveRates(result);
-      if (!result) setRatesError('Live data unavailable — showing reference rates');
-    } catch (err) {
-      setRatesError(err.message || 'Failed to fetch');
-    } finally {
-      setRatesLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { if (activeTab === 'rates') fetchLiveRates(); }, [fetchLiveRates, activeTab]);
-
   // ── Favourites helpers (single currencies) ──────────────────────────────────
   const toggleFavCurrency = code => {
     setFavCurrencies(prev =>
@@ -1147,7 +1020,6 @@ export default function CurrencyConverter() {
             { id: 'converter', icon: '⇄', label: 'Converter' },
             { id: 'multi',     icon: '⊞', label: 'Multi' },
             { id: 'crypto',    icon: '₿',  label: 'Crypto' },
-            { id: 'rates',     icon: '%',  label: 'Rates' },
           ].map(({ id, icon, label }) => (
             <button
               key={id}
@@ -1721,130 +1593,6 @@ export default function CurrencyConverter() {
 
         </div>
         )} {/* end crypto tab */}
-
-        {/* ════════════ RATES TAB ════════════ */}
-        {activeTab === 'rates' && (
-        <div className="px-4 pt-3 pb-4 flex flex-col gap-3">
-
-          {/* ── Header card ──────────────────────────────────────────────────── */}
-          <div className={`rounded-lg border px-4 py-3 flex items-center justify-between gap-3
-            ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
-            <div className="min-w-0">
-              <p className={`text-[10px] font-semibold uppercase tracking-widest mb-0.5
-                ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Central Bank Key Rates</p>
-              <p className={`text-xs ${dm ? 'text-slate-400' : 'text-slate-500'}`}>
-                {ratesLoading
-                  ? 'Fetching live data…'
-                  : liveRates
-                    ? `Live · Source: ${liveRates.source}`
-                    : 'Reference data · as of date shown'
-                }
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={fetchLiveRates}
-              disabled={ratesLoading}
-              className={`shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors
-                ${ratesLoading
-                  ? (dm ? 'opacity-40 border-slate-600 text-slate-500' : 'opacity-40 border-slate-200 text-slate-400')
-                  : (dm ? 'border-slate-600 text-slate-300 hover:border-blue-500 hover:text-blue-400' : 'border-slate-200 text-slate-500 hover:border-blue-400 hover:text-blue-600')
-                }`}
-            >
-              {ratesLoading ? '…' : '↻ Refresh'}
-            </button>
-          </div>
-
-          {/* ── Error banner ─────────────────────────────────────────────────── */}
-          {ratesError && (
-            <p className={`text-[11px] px-3 py-2 rounded-lg border
-              ${dm ? 'text-amber-400 bg-amber-950/40 border-amber-900' : 'text-amber-700 bg-amber-50 border-amber-200'}`}>
-              {ratesError}
-            </p>
-          )}
-
-          {/* ── Rates list ───────────────────────────────────────────────────── */}
-          <div className={`rounded-lg overflow-hidden border
-            ${dm ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
-            {(() => {
-              const liveData = liveRates?.data;
-              const sorted = liveData
-                ? [...CENTRAL_BANK_RATES].sort((a, b) => {
-                    const ra = liveData[CB_ISO_MAP[a.currency]]?.rate ?? a.rate;
-                    const rb = liveData[CB_ISO_MAP[b.currency]]?.rate ?? b.rate;
-                    return rb - ra;
-                  })
-                : CENTRAL_BANK_RATES;
-
-              return sorted.map((item, i) => {
-                const iso = CB_ISO_MAP[item.currency];
-                const live = liveData?.[iso];
-                const displayRate = live ? live.rate.toFixed(2) : item.display;
-                const displayDate = live ? live.date : item.asOf;
-                const isLive = !!live;
-
-                return (
-                  <div
-                    key={item.currency}
-                    className={`flex items-center gap-3 px-4 py-3
-                      ${i !== 0 ? (dm ? 'border-t border-slate-700' : 'border-t border-slate-100') : ''}`}
-                  >
-                    <span className="text-xl leading-none shrink-0">{item.flag}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold leading-tight truncate
-                        ${dm ? 'text-white' : 'text-slate-800'}`}>
-                        {item.bank}
-                      </p>
-                      <p className={`text-[11px] leading-tight mt-0.5
-                        ${dm ? 'text-slate-500' : 'text-slate-400'}`}>
-                        {item.country} · {item.currency}
-                      </p>
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <span className={`text-base font-bold tabular-nums
-                          ${dm ? 'text-white' : 'text-slate-900'}`}>
-                          {displayRate}%
-                        </span>
-                        {!isLive && (
-                          <span className={`text-xs font-bold
-                            ${item.dir > 0
-                              ? (dm ? 'text-red-400' : 'text-red-500')
-                              : item.dir < 0
-                                ? (dm ? 'text-emerald-400' : 'text-emerald-600')
-                                : (dm ? 'text-slate-500' : 'text-slate-400')
-                            }`}>
-                            {item.dir > 0 ? '↑' : item.dir < 0 ? '↓' : '—'}
-                          </span>
-                        )}
-                        {isLive && (
-                          <span className={`text-[9px] font-semibold px-1 py-0.5 rounded
-                            ${dm ? 'bg-emerald-900/50 text-emerald-400' : 'bg-emerald-50 text-emerald-700'}`}>
-                            live
-                          </span>
-                        )}
-                      </div>
-                      <p className={`text-[10px] tabular-nums mt-0.5
-                        ${dm ? 'text-slate-600' : 'text-slate-400'}`}>
-                        {displayDate}
-                      </p>
-                    </div>
-                  </div>
-                );
-              });
-            })()}
-          </div>
-
-          {/* ── Disclaimer ───────────────────────────────────────────────────── */}
-          <p className={`text-[10px] text-center px-2 ${dm ? 'text-slate-600' : 'text-slate-400'}`}>
-            {liveRates
-              ? `Data from ${liveRates.source}. Verify with your central bank.`
-              : 'Reference rates. Verify with official sources.'}
-          </p>
-
-        </div>
-        )} {/* end rates tab */}
 
       </div>
     </div>
